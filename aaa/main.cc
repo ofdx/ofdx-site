@@ -15,9 +15,22 @@
 #include "ofdx/ofdx_fcgi.h"
 
 class OfdxAaa : public OfdxFcgiService {
+	size_t m_sizeOfSid;
+
+	void createRandomSid(std::string & data){
+		if(m_sizeOfSid > 0){
+			std::shared_ptr<unsigned char> raw(new unsigned char[m_sizeOfSid]);
+			std::ifstream infile("/dev/urandom");
+
+			if(raw && infile && infile.read((char*) raw.get(), m_sizeOfSid))
+				data = base64_encode(raw.get(), m_sizeOfSid);
+		}
+	}
+
 public:
 	OfdxAaa() :
-		OfdxFcgiService(9000, "/aaa/")
+		OfdxFcgiService(9000, "/aaa/"),
+		m_sizeOfSid(256)
 	{}
 
 	bool processCliArguments(int argc, char **argv) override {
@@ -134,8 +147,11 @@ public:
 
 					// If the credentials are OK, report success
 					if(checkCredentials(user, http_auth_reencoded)){
-						// FIXME create session ID and set cookie appropriately.
-						std::string sessionId("FIXME");
+						std::string sessionId;
+
+						createRandomSid(sessionId);
+
+						// FIXME - check that SID is not already in use.
 
 						sendAuthorized(conn, sessionId);
 						return;
