@@ -40,16 +40,26 @@ public:
 			<< "Bad request." << std::endl;
 	}
 
+	void sendUnauthorized(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn){
+		conn->out()
+			<< "Status: 401 Unauthorized\r\n"
+			<< "Content-Type: text/plain; charset=utf-8\r\n"
+			<< "Set-Cookie: ofdx_auth=" << "" << "; Path=/; Max-Age=0\r\n"
+			<< "\r\n"
+			<< "Invalid user name or password." << std::endl;
+	}
+
+	void sendAuthorized(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn){
+		conn->out()
+			<< "Status: 204 No Content\r\n"
+			<< "Set-Cookie: ofdx_auth=" << "FIXME" << "; Path=/\r\n"
+			<< "\r\n";
+	}
+
 	void loginResponse(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn){
 		try {
 			if(conn->parameter("REQUEST_METHOD") == std::string("POST")){
 				std::string_view http_auth = conn->parameter("HTTP_AUTHORIZATION");
-
-				// FIXME debug
-				conn->out()
-					<< "Content-Type: text/plain; charset=utf-8\r\n"
-					<< "\r\n"
-					<< "Authorization: " << http_auth << std::endl;
 
 				if((http_auth.find("Basic ") != 0) || (http_auth.size() < 7)){
 					sendBadRequest(conn);
@@ -65,21 +75,50 @@ public:
 						((c >= '0') && (c <= '9')) ||
 						(c == '+') || (c == '/') || (c == '=')
 					)){
-						// FIXME debug
-						std::cerr << "Invalid base64 string: " << http_auth << std::endl;
-						std::cerr << "offending token: [" << c << "]" << std::endl;
-
 						sendBadRequest(conn);
 						return;
 					}
 				}
 
-				// FIXME debug
-				conn->out() << "Authorization header was valid base64." << std::endl;
-
 				std::string http_auth_decoded = base64_decode(http_auth);
 
-				conn->out() << "Decoded as: [" << http_auth_decoded << "]" << std::endl;
+				std::string user, pass;
+				{
+					size_t n = http_auth_decoded.find(':');
+
+					if((n > 0) && (http_auth_decoded.size() > (n + 2))){
+						user = http_auth_decoded.substr(0, n);
+						pass = http_auth_decoded.substr(n + 1);
+					}
+				}
+
+				if(user.size()){
+					for(auto & c : user){
+						// To lowercase...
+						if((c >= 'A') && (c <= 'Z'))
+							c += 0x20;
+
+						if(!(
+							((c >= 'a') && (c <= 'z')) ||
+							((c >= '0') && (c <= '9'))
+						)){
+							// Invalid user name
+							sendUnauthorized(conn);
+							return;
+						}
+					}
+
+					std::string http_auth_reencoded = base64_encode(user + ":" + pass);
+
+					// FIXME debug
+					std::cerr << "user[" << user << "] pass[" << pass << "] base64[" << http_auth_reencoded << "]" << std::endl;
+
+					sendAuthorized(conn);
+					return;
+				}
+
+				sendUnauthorized(conn);
+				return;
 			} else {
 				// Not a POST request
 				sendBadRequest(conn);
