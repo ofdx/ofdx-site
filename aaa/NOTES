@@ -1,0 +1,58 @@
+AAA module - what does it actually need?
+- = base functionality
++ = stretch/wish/idea, not critical
+
+Login action:
+  - Generate a login page with a form to accept credentials
+  - Login action sets a cookie with a session ID, which is also stored in a database.
+
+  - Synchronous login action page which accepts POST and redirects to either a target referer or /
+  + Async login action page which generates either 204 on success or 4xx if unauthorized.
+
+
+Logout action:
+  - Uses cookie session ID to invalidate database entry, if it exists
+  - Clears cookie session ID, if it exists
+
+  - Synchronous logout action page which redirects to either a target referer or /
+  + Async logout action page which always returns 204.
+
+
+Auth action:
+  - CLI tool for other local apps to check a session ID.
+    - returns user name
+    + returns list of authorizations
+	- returns nothing if invalid
+
+
+Registration action:
+  - Creates a new user in the database, sets their password, etc.
+  - Also does a login action
+  - Synchronous action page which accepts POST
+  - Requires email confirmation?
+
+
+Credential database:
+  - Should the entire file additionally be encrypted in some way?
+  - Entries include:
+    - user as a key
+	- password hash
+
+
+User info database:
+  - Just information about the user, keyed on user name.
+  - Entries include:
+    - Creation date
+    - Email address
+    + Permissions and authorizations
+    + Preferences and settings
+
+
+Session database:
+  - If modifying a user's authorizations, sessions must be invalidated.
+  - Entries include:
+  	- session ID as a key
+    - user
+	- start time
+	- expiration time
+	+ authorizations at start time
