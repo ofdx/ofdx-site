@@ -10,7 +10,7 @@
 
 #include <iostream>
 #include <sstream>
-#include <filesystem>
+#include <fstream>
 
 #include "ofdx/ofdx_fcgi.h"
 
@@ -32,6 +32,28 @@ public:
 		return true;
 	}
 
+	// Check whether the provided user and authorization key combination is valid.
+	bool checkCredentials(std::string const& user, std::string const& auth){
+		std::ifstream infile(m_cfg.m_dataPath + "cred");
+
+		if(infile){
+			std::string line;
+
+			while(getline(infile, line)){
+				std::stringstream ss(line);
+				std::string k, v;
+
+				if(ss >> k >> v){
+					// Line has two words on it, could be "name key"
+					if((k == user) && (v == auth))
+						return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
 	void sendBadRequest(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn){
 		conn->out()
 			<< "Status: 400 Bad Request\r\n"
@@ -49,10 +71,10 @@ public:
 			<< "Invalid user name or password." << std::endl;
 	}
 
-	void sendAuthorized(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn){
+	void sendAuthorized(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn, std::string const& sid){
 		conn->out()
 			<< "Status: 204 No Content\r\n"
-			<< "Set-Cookie: ofdx_auth=" << "FIXME" << "; Path=/\r\n"
+			<< "Set-Cookie: ofdx_auth=" << sid << "; Path=/\r\n"
 			<< "\r\n";
 	}
 
@@ -110,11 +132,14 @@ public:
 
 					std::string http_auth_reencoded = base64_encode(user + ":" + pass);
 
-					// FIXME debug
-					std::cerr << "user[" << user << "] pass[" << pass << "] base64[" << http_auth_reencoded << "]" << std::endl;
+					// If the credentials are OK, report success
+					if(checkCredentials(user, http_auth_reencoded)){
+						// FIXME create session ID and set cookie appropriately.
+						std::string sessionId("FIXME");
 
-					sendAuthorized(conn);
-					return;
+						sendAuthorized(conn, sessionId);
+						return;
+					}
 				}
 
 				sendUnauthorized(conn);

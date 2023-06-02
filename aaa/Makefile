@@ -8,7 +8,7 @@ clean:
 
 run: all stop
 	sleep 1
-	( ./${APP} "datapath ~/test/db/aaa/" ) &
+	( ./${APP} "datapath /home/mike/test/db/aaa/" ) &
 
 stop:
 	( killall -q ${APP} ) &
