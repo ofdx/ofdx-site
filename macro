@@ -3,7 +3,7 @@
 # Run a list of make targets in several directories at once.
 
 tgtcmd=make
-paths="aaa somenotes"
+paths="renényffenegger aaa somenotes"
 
 for F in $paths
 do

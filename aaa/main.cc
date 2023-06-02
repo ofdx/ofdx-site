@@ -6,6 +6,7 @@
 */
 
 #include "fcgi/fcgi.hpp"
+#include "base64.h"
 
 #include <iostream>
 #include <sstream>
@@ -49,6 +50,36 @@ public:
 					<< "Content-Type: text/plain; charset=utf-8\r\n"
 					<< "\r\n"
 					<< "Authorization: " << http_auth << std::endl;
+
+				if((http_auth.find("Basic ") != 0) || (http_auth.size() < 7)){
+					sendBadRequest(conn);
+					return;
+				}
+
+				http_auth = http_auth.substr(6);
+
+				for(auto const& c : http_auth){
+					if(!(
+						((c >= 'a') && (c <= 'z')) ||
+						((c >= 'A') && (c <= 'Z')) ||
+						((c >= '0') && (c <= '9')) ||
+						(c == '+') || (c == '/') || (c == '=')
+					)){
+						// FIXME debug
+						std::cerr << "Invalid base64 string: " << http_auth << std::endl;
+						std::cerr << "offending token: [" << c << "]" << std::endl;
+
+						sendBadRequest(conn);
+						return;
+					}
+				}
+
+				// FIXME debug
+				conn->out() << "Authorization header was valid base64." << std::endl;
+
+				std::string http_auth_decoded = base64_decode(http_auth);
+
+				conn->out() << "Decoded as: [" << http_auth_decoded << "]" << std::endl;
 			} else {
 				// Not a POST request
 				sendBadRequest(conn);

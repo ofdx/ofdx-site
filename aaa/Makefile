@@ -1,5 +1,5 @@
 APP=ofdx_aaa
-GPP=g++ -std=c++17 -I../ -I../dmitigr_fcgi/src/
+GPP=g++ -std=c++17 -I../ -I../dmitigr_fcgi/src/ -I../renényffenegger/
 
 all: ${APP}
 
@@ -13,5 +13,5 @@ run: all stop
 stop:
 	( killall -q ${APP} ) &
 
-${APP}: main.cc ../ofdx/*
-	${GPP} -o ${APP} main.cc
+${APP}: main.cc ../ofdx/* ../renényffenegger/rene.o
+	${GPP} -o ${APP} main.cc ../renényffenegger/rene.o
