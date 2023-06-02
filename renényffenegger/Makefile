@@ -1,6 +1,7 @@
 GPP=g++ -std=c++17
 
 all: rene.o
+run: all
 
 clean:
 	rm -f rene.o
