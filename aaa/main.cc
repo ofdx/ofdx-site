@@ -40,12 +40,16 @@ public:
 			<< "\r\n";
 
 		conn->out()
-			<< "<!DOCTYPE html><html><head><title>OFDX AAA</title></head><body>" << std::endl
+			<< "<!DOCTYPE html>" << std::endl
+			<< "<html><head>" << std::endl
+			<< "<title>OFDX AAA</title>" << std::endl
+			<< "<script src=\"/ofdx/js/ofdx_async.js\"></script>" << std::endl
+			<< "</head><body>" << std::endl
 			<< "<p><i>Thanking you!</i></p>" << std::endl;
 
 		// Display a login form
 		conn->out()
-			<< "<form method=POST action=" << m_cfg.m_baseUriPath << "login>"
+			<< "<form id=ofdx_login method=POST action=" << m_cfg.m_baseUriPath << "login>"
 			<< "<label for=" << OFDX_USER << ">Username: </label><input id=" << OFDX_USER << " name=" << OFDX_USER << "><br>"
 			<< "<label for=" << OFDX_PASS << ">Password: </label><input id=" << OFDX_PASS << " name=" << OFDX_PASS << " type=password><br>"
 			<< "<input type=submit value=\"Login\"><br>"
