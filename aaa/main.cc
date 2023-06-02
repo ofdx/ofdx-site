@@ -76,6 +76,8 @@ public:
 
 		} catch(...){}
 
+		conn->out() << "<script src=\"/ofdx/aaa/ofdx_auth.js\"></script>" << std::endl;
+
 		conn->out() << "</body></html>";
 	}
 };

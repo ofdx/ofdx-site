@@ -7,7 +7,7 @@ var OfdxAsync = {
 	method: undefined,
 	target: undefined,
 	
-	get: function(meta){
+	send: function(meta){
 		if(!meta)
 			return false;
 
@@ -36,7 +36,16 @@ var OfdxAsync = {
 		}
 
 		var post = (this.method === "POST") ? meta.post : undefined;
-		http.open(this.method, this.target, true);
+
+		http.open(this.method, this.target, false);
+
+		if(meta.auth){
+			http.setRequestHeader(
+				'Authorization',
+				('Basic ' + btoa(meta.auth.user + ':' + meta.auth.pass))
+			);
+		}
+
 		http.send(post);
 	},
 };
