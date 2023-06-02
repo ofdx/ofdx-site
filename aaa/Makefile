@@ -11,7 +11,7 @@ run: all stop
 	( ./${APP} "datapath ~/test/db/aaa/" ) &
 
 stop:
-	( killall ${APP} > /dev/null 2>&1 ) &
+	( killall -q ${APP} ) &
 
 ${APP}: main.cc ../ofdx/*
 	${GPP} -o ${APP} main.cc

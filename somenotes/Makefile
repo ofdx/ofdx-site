@@ -11,7 +11,7 @@ run: all stop
 	( ./${SOMENOTES} ) &
 
 stop:
-	( killall ${SOMENOTES} > /dev/null 2>&1 ) &
+	( killall -q ${SOMENOTES} ) &
 
 ${SOMENOTES}: main.cc ../ofdx/*
 	${GPP} -o ${SOMENOTES} main.cc

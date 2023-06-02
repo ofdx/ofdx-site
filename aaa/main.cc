@@ -31,9 +31,46 @@ public:
 		return true;
 	}
 
+	void sendBadRequest(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn){
+		conn->out()
+			<< "Status: 400 Bad Request\r\n"
+			<< "Content-Type: text/plain; charset=utf-8\r\n"
+			<< "\r\n"
+			<< "Bad request." << std::endl;
+	}
+
+	void loginResponse(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn){
+		try {
+			if(conn->parameter("REQUEST_METHOD") == std::string("POST")){
+				std::string_view http_auth = conn->parameter("HTTP_AUTHORIZATION");
+
+				// FIXME debug
+				conn->out()
+					<< "Content-Type: text/plain; charset=utf-8\r\n"
+					<< "\r\n"
+					<< "Authorization: " << http_auth << std::endl;
+			} else {
+				// Not a POST request
+				sendBadRequest(conn);
+				return;
+			}
+		} catch(...){
+			// Likely caused by a missing Authorization header.
+			sendBadRequest(conn);
+			return;
+		}
+	}
+
 	void handleConnection(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn) override {
 		std::string const OFDX_USER("ofdx_user");
 		std::string const OFDX_PASS("ofdx_pass");
+
+		std::string const URL_LOGIN(m_cfg.m_baseUriPath + "login/");
+
+		if(conn->parameter("SCRIPT_NAME") == URL_LOGIN){
+			loginResponse(conn);
+			return;
+		}
 
 		conn->out()
 			<< "Content-Type: text/html; charset=utf-8\r\n"
@@ -49,7 +86,7 @@ public:
 
 		// Display a login form
 		conn->out()
-			<< "<form id=ofdx_login method=POST action=" << m_cfg.m_baseUriPath << "login>"
+			<< "<form id=ofdx_login method=POST action=" << URL_LOGIN << ">"
 			<< "<label for=" << OFDX_USER << ">Username: </label><input id=" << OFDX_USER << " name=" << OFDX_USER << "><br>"
 			<< "<label for=" << OFDX_PASS << ">Password: </label><input id=" << OFDX_PASS << " name=" << OFDX_PASS << " type=password><br>"
 			<< "<input type=submit value=\"Login\"><br>"
