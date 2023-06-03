@@ -11,20 +11,93 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
+#include <unordered_map>
 
 #include "ofdx/ofdx_fcgi.h"
 
 class OfdxAaa : public OfdxFcgiService {
 	size_t m_sizeOfSid;
 
-	void createRandomSid(std::string & data){
+	void createRandomSid(std::string & data) const {
 		if(m_sizeOfSid > 0){
-			std::shared_ptr<unsigned char> raw(new unsigned char[m_sizeOfSid]);
+			std::shared_ptr<unsigned char[]> raw(new unsigned char[m_sizeOfSid]);
 			std::ifstream infile("/dev/urandom");
 
 			if(raw && infile && infile.read((char*) raw.get(), m_sizeOfSid))
-				data = base64_encode(raw.get(), m_sizeOfSid);
+				data = base64_encode(raw.get(), m_sizeOfSid, true);
 		}
+	}
+
+	// Create a session ID for the specified user and return it in SID. Returns
+	// false if the operation failed.
+	bool getSid(std::string const& user, std::string & sid) const {
+		std::unordered_map<std::string, std::string> sessionTable;
+		std::string const path(m_cfg.m_dataPath + "sess");
+		std::ifstream infile(path);
+
+		// Read all existing sessions.
+		if(infile){
+			std::string line;
+
+			while(getline(infile, line)){
+				std::stringstream ss(line);
+				std::string k, v;
+
+				if(ss >> k >> v)
+					sessionTable[k] = v;
+			}
+		}
+
+		// Try at most five times to create a unique SID. This should almost
+		// always work on the first try.
+		for(int attempts = 5; attempts > 0; -- attempts){
+			createRandomSid(sid);
+
+			// If the count is zero, this session ID is unique.
+			if(sessionTable.count(sid) == 0){
+				sessionTable[sid] = user;
+
+				std::ofstream outfile(path);
+				if(outfile){
+					for(auto const& el : sessionTable){
+						outfile << el.first << " " << el.second << std::endl;
+					}
+
+					// If we reached this point, the session ID should have
+					// successfully been persisted.
+					return true;
+				}
+			}
+		}
+
+		// Clear SID, we couldn't create a unique one. This should never happen.
+		sid = "";
+		return false;
+	}
+
+	// Return the username associated with this active session ID.
+	bool getUser(std::string const& sid, std::string & user) const {
+		std::string const path(m_cfg.m_dataPath + "sess");
+		std::ifstream infile(path);
+
+		// Check session database.
+		if(infile){
+			std::string line;
+
+			while(getline(infile, line)){
+				std::stringstream ss(line);
+				std::string k, v;
+
+				// Return the username if we match.
+				if((ss >> k >> v) && (k == sid)){
+					user = v;
+					return true;
+				}
+			}
+		}
+
+		// The SID is not valid.
+		return false;
 	}
 
 public:
@@ -46,7 +119,7 @@ public:
 	}
 
 	// Check whether the provided user and authorization key combination is valid.
-	bool checkCredentials(std::string const& user, std::string const& auth){
+	bool checkCredentials(std::string const& user, std::string const& auth) const {
 		std::ifstream infile(m_cfg.m_dataPath + "cred");
 
 		if(infile){
@@ -67,7 +140,7 @@ public:
 		return false;
 	}
 
-	void sendBadRequest(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn){
+	void sendBadRequest(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn) const {
 		conn->out()
 			<< "Status: 400 Bad Request\r\n"
 			<< "Content-Type: text/plain; charset=utf-8\r\n"
@@ -75,7 +148,7 @@ public:
 			<< "Bad request." << std::endl;
 	}
 
-	void sendUnauthorized(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn){
+	void sendUnauthorized(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn) const {
 		conn->out()
 			<< "Status: 401 Unauthorized\r\n"
 			<< "Content-Type: text/plain; charset=utf-8\r\n"
@@ -84,7 +157,7 @@ public:
 			<< "Invalid user name or password." << std::endl;
 	}
 
-	void sendAuthorized(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn, std::string const& sid){
+	void sendAuthorized(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn, std::string const& sid) const {
 		conn->out()
 			<< "Status: 204 No Content\r\n"
 			<< "Set-Cookie: ofdx_auth=" << sid << "; Path=/\r\n"
@@ -147,14 +220,12 @@ public:
 
 					// If the credentials are OK, report success
 					if(checkCredentials(user, http_auth_reencoded)){
-						std::string sessionId;
+						std::string sid;
 
-						createRandomSid(sessionId);
-
-						// FIXME - check that SID is not already in use.
-
-						sendAuthorized(conn, sessionId);
-						return;
+						if(getSid(user, sid)){
+							sendAuthorized(conn, sid);
+							return;
+						}
 					}
 				}
 
