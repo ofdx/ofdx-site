@@ -8,11 +8,10 @@ window.addEventListener("load", (e) => {
 	var inFlight = false;
 
 	if(form_login){
-		// FIXME debug
-		console.log('login form detected');
-
 		form_login.addEventListener('submit', (event) => {
 			event.preventDefault();
+
+			// Prevent double-submission of the form while the response is pending.
 			if(inFlight)
 				return;
 
@@ -20,23 +19,21 @@ window.addEventListener("load", (e) => {
 			for(let i = 0; i < form_login.elements.length; ++i)
 				form_login.elements[i].disabled = true;
 
-			var ofdx_user = form_login.elements['ofdx_user'];
-			var ofdx_pass = form_login.elements['ofdx_pass'];
-
-			// FIXME debug
-			console.log('form submitted:', form_login);
-
 			OfdxAsync.send({
 				target: form_login.action,
 				method: 'POST',
 				auth: {
-					user: ofdx_user.value,
-					pass: ofdx_pass.value
+					user: form_login.elements['ofdx_user'].value,
+					pass: form_login.elements['ofdx_pass'].value
 				},
 				completion: (http) => {
-					// FIXME debug
-					console.log(http);
+					if(http.status == 204){
+						let redir = form_login.elements['ofdx_redir'];
 
+						window.location = (redir ? redir.value : '/');
+					} else alert(http.response);
+
+					// Release the form controls so the user can try again.
 					inFlight = false;
 					for(let i = 0; i < form_login.elements.length; ++i)
 						form_login.elements[i].disabled = false;

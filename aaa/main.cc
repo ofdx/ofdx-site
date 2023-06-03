@@ -15,7 +15,10 @@
 
 #include "ofdx/ofdx_fcgi.h"
 
+std::string const OFDX_AUTH("ofdx_auth");
+
 class OfdxAaa : public OfdxFcgiService {
+
 	size_t m_sizeOfSid;
 
 	void createRandomSid(std::string & data) const {
@@ -100,6 +103,44 @@ class OfdxAaa : public OfdxFcgiService {
 		return false;
 	}
 
+	// Remove the session ID from the database (logout).
+	void rmSid(std::string const& sid) const {
+		std::unordered_map<std::string, std::string> sessionTable;
+		std::string const path(m_cfg.m_dataPath + "sess");
+		std::ifstream infile(path);
+
+		bool exists = false;
+
+		// Read all existing sessions.
+		if(infile){
+			std::string line;
+
+			while(getline(infile, line)){
+				std::stringstream ss(line);
+				std::string k, v;
+
+				if(ss >> k >> v){
+					if(k == sid){
+						exists = true;
+					} else {
+						sessionTable[k] = v;
+					}
+				}
+			}
+		}
+
+		// If the count is zero, this session ID is unique.
+		if(exists){
+			std::ofstream outfile(path);
+
+			if(outfile){
+				for(auto const& el : sessionTable){
+					outfile << el.first << " " << el.second << std::endl;
+				}
+			}
+		}
+	}
+
 public:
 	OfdxAaa() :
 		OfdxFcgiService(9000, "/aaa/"),
@@ -152,7 +193,7 @@ public:
 		conn->out()
 			<< "Status: 401 Unauthorized\r\n"
 			<< "Content-Type: text/plain; charset=utf-8\r\n"
-			<< "Set-Cookie: ofdx_auth=" << "" << "; Path=/; Max-Age=0\r\n"
+			<< "Set-Cookie: " << OFDX_AUTH << "=" << "" << "; Path=/; Max-Age=0\r\n"
 			<< "\r\n"
 			<< "Invalid user name or password." << std::endl;
 	}
@@ -160,7 +201,7 @@ public:
 	void sendAuthorized(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn, std::string const& sid) const {
 		conn->out()
 			<< "Status: 204 No Content\r\n"
-			<< "Set-Cookie: ofdx_auth=" << sid << "; Path=/\r\n"
+			<< "Set-Cookie: " << OFDX_AUTH << "=" << sid << "; Path=/\r\n"
 			<< "\r\n";
 	}
 
@@ -243,14 +284,50 @@ public:
 		}
 	}
 
+	void logoutResponse(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn) const {
+		std::string referer;
+
+		try {
+			referer = conn->parameter("HTTP_REFERER");
+		} catch(...){
+			referer = "/";
+		}
+
+		conn->out()
+			<< "Status: 302 Found\r\n"
+			<< "Location: " << referer << "\r\n"
+			<< "Set-Cookie: " << OFDX_AUTH << "=" << "" << "; Path=/; Max-Age=0\r\n"
+			<< "\r\n";
+	}
+
 	void handleConnection(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn) override {
 		std::string const OFDX_USER("ofdx_user");
 		std::string const OFDX_PASS("ofdx_pass");
+		std::string const OFDX_REDIR("ofdx_redir");
 
 		std::string const URL_LOGIN(m_cfg.m_baseUriPath + "login/");
+		std::string const URL_LOGOUT(m_cfg.m_baseUriPath + "logout/");
 
-		if(conn->parameter("SCRIPT_NAME") == URL_LOGIN){
+		std::string const SCRIPT_NAME(conn->parameter("SCRIPT_NAME"));
+
+		std::string user, session;
+		{
+			// Check cookies for session ID.
+			std::unordered_map<std::string, std::string> cookies;
+			parseCookies(conn, cookies);
+
+			if(cookies.count(OFDX_AUTH)){
+				session = cookies[OFDX_AUTH];
+				getUser(session, user);
+			}
+		}
+
+		if(SCRIPT_NAME == URL_LOGIN){
 			loginResponse(conn);
+			return;
+		} else if(SCRIPT_NAME == URL_LOGOUT){
+			rmSid(session);
+			logoutResponse(conn);
 			return;
 		}
 
@@ -266,37 +343,22 @@ public:
 			<< "</head><body>" << std::endl
 			<< "<p><i>Thanking you!</i></p>" << std::endl;
 
-		// Display a login form
-		conn->out()
-			<< "<form id=ofdx_login method=POST action=" << URL_LOGIN << ">"
-			<< "<label for=" << OFDX_USER << ">Username: </label><input id=" << OFDX_USER << " name=" << OFDX_USER << "><br>"
-			<< "<label for=" << OFDX_PASS << ">Password: </label><input id=" << OFDX_PASS << " name=" << OFDX_PASS << " type=password><br>"
-			<< "<input type=submit value=\"Login\"><br>"
-			<< "</form>" << std::endl;
-
-		// Display request body
-		try {
-			std::string content_type(conn->parameter("CONTENT_TYPE"));
-			int content_length(std::stoi(std::string(conn->parameter("CONTENT_LENGTH"))));
-
-			// FIXME debug
+		if(user.empty()){
+			// Display a login form
 			conn->out()
-				<< "<p>Received POST data of type \"<b>" << content_type << "</b>\" and "
-				<< "length <b>" << content_length << "</b></p>" << std::endl;
-
-			if(content_length > 0){
-				std::string line;
-
-				getline(conn->in(), line);
-
-				// FIXME debug
-				conn->out() << "<pre>" << line << "</pre>" << std::endl;
-			}
-
-		} catch(...){}
+				<< "<form id=ofdx_login method=POST action=" << URL_LOGIN << ">"
+				<< "<label for=" << OFDX_USER << ">Username: </label><input id=" << OFDX_USER << " name=" << OFDX_USER << "><br>"
+				<< "<label for=" << OFDX_PASS << ">Password: </label><input id=" << OFDX_PASS << " name=" << OFDX_PASS << " type=password><br>"
+				<< "<input type=hidden name=" << OFDX_REDIR << " value=/notes/>"
+				<< "<input type=submit value=\"Login\"><br>"
+				<< "</form>" << std::endl;
+		} else {
+			conn->out()
+				<< "<p>Welcome <b>" << user << "</b>!</p>" << std::endl
+				<< "<p><a href=\"" << URL_LOGOUT << "\">Click here</a> to logout.</p>" << std:: endl;
+		}
 
 		conn->out() << "<script src=\"/ofdx/aaa/ofdx_auth.js\"></script>" << std::endl;
-
 		conn->out() << "</body></html>";
 	}
 };

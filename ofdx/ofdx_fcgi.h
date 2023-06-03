@@ -61,6 +61,29 @@ protected:
 
 	virtual void handleConnection(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn) = 0;
 
+	void parseCookies(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn, std::unordered_map<std::string, std::string> & cookies) const {
+		try {
+			std::string http_cookie(conn->parameter("HTTP_COOKIE"));
+			std::stringstream http_cookie_ss(http_cookie);
+			std::string cookie;
+
+			while(http_cookie_ss >> cookie){
+				size_t n = cookie.find('=');
+
+				for(auto & c : cookie){
+					if(c == ';'){
+						c = 0;
+						break;
+					}
+				}
+
+				if((n > 0) && (n < cookie.size() - 1))
+					cookies[cookie.substr(0, n)] = cookie.substr(n + 1);
+			}
+
+		} catch(...){}
+	}
+
 public:
 	OfdxFcgiService(int const port, std::string const& baseUriPath) :
 		m_cfg(port, baseUriPath)
