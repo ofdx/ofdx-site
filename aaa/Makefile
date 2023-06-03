@@ -6,7 +6,7 @@ GPP=g++ -std=c++17 -I../ -I../dmitigr_fcgi/src/ -I../renényffenegger/
 all: ${APP} ${SESSION_MGR}
 
 clean:
-	rm -f ${APP}
+	rm -f ${APP} ${SESSION_MGR}
 
 run: all stop
 	sleep 1
