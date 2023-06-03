@@ -2,6 +2,7 @@ GPP=g++ -std=c++17
 
 all: rene.o
 run: all
+stop:
 
 clean:
 	rm -f rene.o
