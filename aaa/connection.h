@@ -7,6 +7,7 @@
 #define KWS3_CONNECTION_H
 
 #include <sstream>
+#include <unordered_map>
 
 #include <arpa/inet.h>
 
@@ -51,27 +52,17 @@ public:
 
 	virtual inline bool valid() const { return m_valid; }
 
-	bool receiveCmd();
 };
 
-// Two unidirectional connections forming a single bi-directional connection.
-class BiConn {
-	Connection *m_read, *m_write;
+class CmdConnection : public Connection {
+	std::unordered_map<std::string, std::string> *m_pSessionTable;
 
 public:
-
-	BiConn(Connection *read, Connection *write) :
-		m_read(read),
-		m_write(write)
+	CmdConnection(std::unordered_map<std::string, std::string> *sessionTable) :
+		m_pSessionTable(sessionTable)
 	{}
 
-	~BiConn(){
-		delete m_read;
-		delete m_write;
-	}
-
-	inline Connection *write(){ return m_write; }
-	inline Connection *read(){ return m_read; }
+	bool receiveCmd(bool & modified);
 };
 
 #endif

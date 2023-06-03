@@ -7,6 +7,8 @@
 */
 
 #include <iostream>
+#include <fstream>
+#include <sstream>
 
 #include <signal.h>
 #include <unistd.h>
@@ -15,39 +17,71 @@
 
 // Listen on port 9001/TCP.
 
-// Protocol is text based.
-// The first line describes the action
-// The following lines are a keyword, whitespace, and then a value.
-// An empty line indicates the end of the request.
-
 /*
 // Create session
-SESSION CREATE
-user $name
+SESSION CREATE $name
 
 // Verify session
-SESSION VERIFY
-id $sessionid
+SESSION VERIFY $id
 
 // Delete session
-SESSION DELETE
-id $sessionid
+SESSION DELETE $id
 
 */
 
+std::string const SESSION_DATABASE_FILENAME(std::string("/home/mike/test/db/aaa/") + "sess");
+
 class OfdxSessionManager {
+
 	TcpListener m_listener;
+
+	// Key is session ID, value is user name.
+	std::unordered_map<std::string, std::string> m_sessionTable;
+
+	void load(){
+		std::ifstream infile(SESSION_DATABASE_FILENAME);
+
+		// Read all existing sessions.
+		if(infile){
+			std::string line;
+
+			while(getline(infile, line)){
+				std::stringstream ss(line);
+				std::string k, v;
+
+				if(ss >> k >> v)
+					m_sessionTable[k] = v;
+			}
+		}
+	}
+
+	void save(){
+		std::ofstream outfile(SESSION_DATABASE_FILENAME);
+
+		// Write table to disk, replacing existing data.
+		if(outfile){
+			for(auto const& el : m_sessionTable){
+				outfile << el.first << " " << el.second << std::endl;
+			}
+		}
+	}
 
 public:
 	OfdxSessionManager() :
 		m_listener(9001, true)
-	{}
+	{
+		load();
+	}
 
 	bool run(){
-		Connection conn;
+		CmdConnection conn(&m_sessionTable);
+		bool modified = false;
 
 		if(m_listener.accept(conn) >= 0)
-			while(conn.receiveCmd());
+			while(conn.receiveCmd(modified));
+
+		if(modified)
+			save();
 
 		return true;
 	}

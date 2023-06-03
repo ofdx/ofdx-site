@@ -4,12 +4,16 @@
 */
 
 #include "connection.h"
+#include "base64.h"
 
 #include <iostream>
 #include <cstring>
+#include <memory>
+#include <fstream>
 
 #include <unistd.h>
 #include <sys/types.h>
+
 
 using namespace std;
 
@@ -53,7 +57,18 @@ int Connection::readSuccess(ssize_t rc, const char *buf){
 	return rc;
 }
 
-bool Connection::receiveCmd(){
+
+void createRandomSid(std::string & data){
+	size_t const sizeOfSid(256);
+
+	std::shared_ptr<unsigned char[]> raw(new unsigned char[sizeOfSid]);
+	std::ifstream infile("/dev/urandom");
+
+	if(raw && infile && infile.read((char*) raw.get(), sizeOfSid))
+		data = base64_encode(raw.get(), sizeOfSid, true);
+}
+
+bool CmdConnection::receiveCmd(bool & modified){
 	prepareToRead();
 
 	int rc;
@@ -71,8 +86,69 @@ bool Connection::receiveCmd(){
 
 	} while(m_sockstream.str().find("\n\n") == string::npos);
 
-	// FIXME debug - echo back what we read.
-	tryWrite(m_sockstream.str());
+	// Parse commands
+	{
+		std::string line;
+
+		while(getline(m_sockstream, line)){
+			std::stringstream cmd(line), oss;
+			std::string op, arg;
+
+			if(cmd >> op >> arg){
+				if(op == "CREATE"){
+					// Create a new session and return the ID.
+					std::string sid;
+
+					for(int attempts = 5; attempts > 0; -- attempts){
+						createRandomSid(sid);
+
+						if(m_pSessionTable->count(sid) == 0){
+							(*m_pSessionTable)[sid] = arg;
+							modified = true;
+
+							oss << sid;
+							break;
+						}
+					}
+
+					oss << std::endl;
+				} else if(op == "VERIFY"){
+					// Returns the user name if the session exists.
+					if(m_pSessionTable->count(arg) != 0)
+						oss << (*m_pSessionTable)[arg];
+
+					oss << std::endl;
+				} else if(op == "DELETE"){
+					// Delete the specified session by ID, if it exists. Returns "OK".
+					if(m_pSessionTable->count(arg) != 0){
+						m_pSessionTable->erase(arg);
+						modified = true;
+					}
+
+					oss << "OK" << std::endl;
+				} else if(op == "LIST"){
+					oss << "DEBUG" << std::endl;
+
+					// FIXME debug - this command just lists the entire table, should be removed.
+					for(auto const& el : *m_pSessionTable)
+						std::cerr << "-- DEBUG [" << el.second << "]:[" << el.first << "]" << std::endl;
+				}
+
+				// Send the response
+				if(oss.str().size())
+					tryWrite(oss.str());
+			}
+		}
+	}
+
+	/*
+	// Table may be modified directly.
+	(*m_pSessionTable)[std::string("TEST")] = std::string("WOOF");
+
+	// Set modified to indicate that the changes should be written to disk when
+	// we get back to the main loop.
+	modified = true;
+	*/
 
 	// Close connection.
 	return false;

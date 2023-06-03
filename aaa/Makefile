@@ -21,7 +21,6 @@ stop:
 ${APP}: main.cc ../ofdx/* ../renényffenegger/rene.o
 	${GPP} -o ${APP} main.cc ../renényffenegger/rene.o
 
-
 # Session manager service
-${SESSION_MGR}: session_manager.cc connection.* tcpListener.*
-	${GPP} -o ${SESSION_MGR} session_manager.cc connection.cc tcpListener.cc
+${SESSION_MGR}: session_manager.cc connection.* tcpListener.* ../renényffenegger/rene.o
+	${GPP} -o ${SESSION_MGR} session_manager.cc connection.cc tcpListener.cc ../renényffenegger/rene.o
