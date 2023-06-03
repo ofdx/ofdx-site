@@ -349,7 +349,7 @@ public:
 				<< "<form id=ofdx_login method=POST action=" << URL_LOGIN << ">"
 				<< "<label for=" << OFDX_USER << ">Username: </label><input id=" << OFDX_USER << " name=" << OFDX_USER << "><br>"
 				<< "<label for=" << OFDX_PASS << ">Password: </label><input id=" << OFDX_PASS << " name=" << OFDX_PASS << " type=password><br>"
-				<< "<input type=hidden name=" << OFDX_REDIR << " value=/notes/>"
+				//<< "<input type=hidden name=" << OFDX_REDIR << " value=/notes/>"
 				<< "<input type=submit value=\"Login\"><br>"
 				<< "</form>" << std::endl;
 		} else {

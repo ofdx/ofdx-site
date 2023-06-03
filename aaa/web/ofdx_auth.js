@@ -30,7 +30,10 @@ window.addEventListener("load", (e) => {
 					if(http.status == 204){
 						let redir = form_login.elements['ofdx_redir'];
 
-						window.location = (redir ? redir.value : '/');
+						if(redir)
+							window.location = redir;
+						else
+							window.location.reload();
 					} else alert(http.response);
 
 					// Release the form controls so the user can try again.
