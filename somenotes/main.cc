@@ -20,7 +20,7 @@
 class OfdxSomeNotes : public OfdxFcgiService {
 public:
 	OfdxSomeNotes() :
-		OfdxFcgiService(9001, "/notes/")
+		OfdxFcgiService(9010, "/notes/")
 	{
 		// FIXME debug
 		m_cfg.m_dataPath = "./";
