@@ -14,8 +14,6 @@
 #include <unordered_map>
 
 
-std::string const OFDX_AUTH("ofdx_auth");
-
 class OfdxAaa : public OfdxFcgiService {
 
 	// Create a session ID for the specified user and return it in SID. Returns
@@ -38,7 +36,7 @@ class OfdxAaa : public OfdxFcgiService {
 
 public:
 	OfdxAaa() :
-		OfdxFcgiService(PORT_OFDX_AAA, "/aaa/")
+		OfdxFcgiService(PORT_OFDX_AAA, PATH_OFDX_AAA)
 	{}
 
 	bool processCliArguments(int argc, char **argv) override {
@@ -195,13 +193,6 @@ public:
 	}
 
 	void handleConnection(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn) override {
-		std::string const OFDX_USER("ofdx_user");
-		std::string const OFDX_PASS("ofdx_pass");
-		std::string const OFDX_REDIR("ofdx_redir");
-
-		std::string const URL_LOGIN(m_cfg.m_baseUriPath + "login/");
-		std::string const URL_LOGOUT(m_cfg.m_baseUriPath + "logout/");
-
 		std::string const SCRIPT_NAME(conn->parameter("SCRIPT_NAME"));
 
 		std::string user, session;
@@ -233,7 +224,6 @@ public:
 			<< "<!DOCTYPE html>" << std::endl
 			<< "<html><head>" << std::endl
 			<< "<title>OFDX AAA</title>" << std::endl
-			<< "<script src=\"/ofdx/js/ofdx_async.js\"></script>" << std::endl
 			<< "</head><body>" << std::endl
 			<< "<p><i>Thanking you!</i></p>" << std::endl;
 
@@ -252,7 +242,10 @@ public:
 				<< "<p><a href=\"" << URL_LOGOUT << "\">Click here</a> to logout.</p>" << std:: endl;
 		}
 
-		conn->out() << "<script src=\"/ofdx/aaa/ofdx_auth.js\"></script>" << std::endl;
+		conn->out()
+			<< "<script src=\"/ofdx/js/ofdx_async.js\"></script>" << std::endl
+			<< "<script src=\"/ofdx/aaa/ofdx_auth.js\"></script>" << std::endl;
+
 		conn->out() << "</body></html>";
 	}
 };

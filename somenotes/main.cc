@@ -19,13 +19,29 @@
 class OfdxSomeNotes : public OfdxFcgiService {
 public:
 	OfdxSomeNotes() :
-		OfdxFcgiService(9010, "/notes/")
+		OfdxFcgiService(PORT_OFDX_SOMENOTES, PATH_OFDX_SOMENOTES)
 	{
 		// FIXME debug
 		m_cfg.m_dataPath = "./";
 	}
 
 	void handleConnection(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn) override {
+		std::string user, session;
+		{
+			// Check cookies for session ID.
+			std::unordered_map<std::string, std::string> cookies;
+			parseCookies(conn, cookies);
+
+			if(cookies.count(OFDX_AUTH)){
+				session = cookies[OFDX_AUTH];
+
+				if(!querySessionDatabase(std::string("VERIFY ") + session, user)){
+					session = "";
+					user = "";
+				}
+			}
+		}
+
 		conn->out()
 			<< "Content-Type: text/html; charset=utf-8\r\n"
 			<< "\r\n";
@@ -60,6 +76,21 @@ public:
 
 			conn->out() << "</table>" << std::endl;
 		}
+
+		if(user.empty()){
+			conn->out()
+				<< "<form id=ofdx_login method=POST action=" << URL_LOGIN << ">"
+				<< "<label for=" << OFDX_USER << ">Username: </label><input id=" << OFDX_USER << " name=" << OFDX_USER << "><br>"
+				<< "<label for=" << OFDX_PASS << ">Password: </label><input id=" << OFDX_PASS << " name=" << OFDX_PASS << " type=password><br>"
+				<< "<input type=submit value=\"Login\"><br>"
+				<< "</form>" << std::endl;
+		} else {
+			conn->out() << "<p>Welcome <b>" << user << "</b>!</p>" << std::endl;
+		}
+
+		conn->out()
+			<< "<script src=\"/ofdx/js/ofdx_async.js\"></script>" << std::endl
+			<< "<script src=\"/ofdx/aaa/ofdx_auth.js\"></script>" << std::endl;
 
 		conn->out() << "</body></html>";
 	}
