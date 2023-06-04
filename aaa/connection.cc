@@ -71,84 +71,64 @@ void createRandomSid(std::string & data){
 bool CmdConnection::receiveCmd(bool & modified){
 	prepareToRead();
 
-	int rc;
 	do {
-		rc = tryRead();
+		int rc = tryRead();
 
 		if(rc < 0)
 			// Retry
 			continue;
 
-		if(rc == 0){
+		if(rc == 0)
 			// 0 bytes read is generally a timeout.
 			return false;
-		}
 
 	} while(m_sockstream.str().find("\n\n") == string::npos);
 
 	// Parse commands
-	{
-		std::string line;
+	std::string line;
+	while(getline(m_sockstream, line)){
+		std::stringstream cmd(line), oss;
+		std::string op, arg;
 
-		while(getline(m_sockstream, line)){
-			std::stringstream cmd(line), oss;
-			std::string op, arg;
+		if(cmd >> op >> arg){
+			if(op == "CREATE"){
+				// Create a new session and return the ID.
+				std::string sid;
 
-			if(cmd >> op >> arg){
-				if(op == "CREATE"){
-					// Create a new session and return the ID.
-					std::string sid;
+				for(int attempts = 5; attempts > 0; -- attempts){
+					createRandomSid(sid);
 
-					for(int attempts = 5; attempts > 0; -- attempts){
-						createRandomSid(sid);
-
-						if(m_pSessionTable->count(sid) == 0){
-							(*m_pSessionTable)[sid] = arg;
-							modified = true;
-
-							oss << sid;
-							break;
-						}
-					}
-
-					oss << std::endl;
-				} else if(op == "VERIFY"){
-					// Returns the user name if the session exists.
-					if(m_pSessionTable->count(arg) != 0)
-						oss << (*m_pSessionTable)[arg];
-
-					oss << std::endl;
-				} else if(op == "DELETE"){
-					// Delete the specified session by ID, if it exists. Returns "OK".
-					if(m_pSessionTable->count(arg) != 0){
-						m_pSessionTable->erase(arg);
+					if(m_pSessionTable->count(sid) == 0){
+						(*m_pSessionTable)[sid] = arg;
 						modified = true;
+
+						oss << sid;
+						break;
 					}
-
-					oss << "OK" << std::endl;
-				} else if(op == "LIST"){
-					oss << "DEBUG" << std::endl;
-
-					// FIXME debug - this command just lists the entire table, should be removed.
-					for(auto const& el : *m_pSessionTable)
-						std::cerr << "-- DEBUG [" << el.second << "]:[" << el.first << "]" << std::endl;
 				}
 
-				// Send the response
-				if(oss.str().size())
-					tryWrite(oss.str());
+				oss << std::endl;
+			} else if(op == "VERIFY"){
+				// Returns the user name if the session exists.
+				if(m_pSessionTable->count(arg) != 0)
+					oss << (*m_pSessionTable)[arg];
+
+				oss << std::endl;
+			} else if(op == "DELETE"){
+				// Delete the specified session by ID, if it exists. Returns "OK".
+				if(m_pSessionTable->count(arg) != 0){
+					m_pSessionTable->erase(arg);
+					modified = true;
+				}
+
+				oss << "OK" << std::endl;
 			}
+
+			// Send the response
+			if(oss.str().size())
+				tryWrite(oss.str());
 		}
 	}
-
-	/*
-	// Table may be modified directly.
-	(*m_pSessionTable)[std::string("TEST")] = std::string("WOOF");
-
-	// Set modified to indicate that the changes should be written to disk when
-	// we get back to the main loop.
-	modified = true;
-	*/
 
 	// Close connection.
 	return false;

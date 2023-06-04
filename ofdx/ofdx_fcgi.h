@@ -125,12 +125,18 @@ public:
 	}
 
 	bool querySessionDatabase(std::string const& query, std::string & result) const {
+		std::string const EOFBARRIER("E=O=F");
+
 		std::stringstream css;
 		FILE *p = NULL;
 
-		css << "cat << E=O=F | nc localhost " << PORT_OFDX_AAA_SESSION_MGR << "\n"
+		// We can't send this string, lest we risk leaking out of the heredoc.
+		if(query.find(EOFBARRIER) != std::string::npos)
+			return false;
+
+		css << "cat << " << EOFBARRIER << " | nc localhost " << PORT_OFDX_AAA_SESSION_MGR << "\n"
 			<< query << "\n\n"
-			<< "E=O=F";
+			<< EOFBARRIER;
 
 		if(p = popen(css.str().c_str(), "r")){
 			size_t n = 1024;
