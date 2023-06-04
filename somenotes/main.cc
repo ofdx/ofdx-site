@@ -50,6 +50,28 @@ public:
 			<< "<!DOCTYPE html><html><head><title>OFDX</title></head><body>" << std::endl
 			<< "<p><i>Coming soon...</i></p>" << std::endl;
 
+		conn->out()
+			<< "<script src=\"/ofdx/js/ofdx_async.js\"></script>" << std::endl
+			<< "<script src=\"/ofdx/aaa/ofdx_auth.js\"></script>" << std::endl;
+
+		// Hide everything behind authorization.
+		if(user.empty()){
+			conn->out()
+				<< "<form id=ofdx_login method=POST action=" << URL_LOGIN << ">"
+				<< "<label for=" << OFDX_USER << ">Username: </label><input id=" << OFDX_USER << " name=" << OFDX_USER << "><br>"
+				<< "<label for=" << OFDX_PASS << ">Password: </label><input id=" << OFDX_PASS << " name=" << OFDX_PASS << " type=password><br>"
+				<< "<input type=submit value=\"Login\"><br>"
+				<< "</form>" << std::endl;
+
+			return;
+		}
+
+		// Greeting and logout link.
+		conn->out()
+			<< "<p>Welcome <b>" << user << "</b>!</p>" << std::endl
+			<< "<p><a href=\"" << URL_LOGOUT << "\">Logout</a>.</p>" << std::endl;
+
+
 		// FIXME debug - Dump CGI parameters
 		{
 			conn->out() << "<table><tr><th>Name</th><th>Value</th></tr>";
@@ -76,21 +98,6 @@ public:
 
 			conn->out() << "</table>" << std::endl;
 		}
-
-		if(user.empty()){
-			conn->out()
-				<< "<form id=ofdx_login method=POST action=" << URL_LOGIN << ">"
-				<< "<label for=" << OFDX_USER << ">Username: </label><input id=" << OFDX_USER << " name=" << OFDX_USER << "><br>"
-				<< "<label for=" << OFDX_PASS << ">Password: </label><input id=" << OFDX_PASS << " name=" << OFDX_PASS << " type=password><br>"
-				<< "<input type=submit value=\"Login\"><br>"
-				<< "</form>" << std::endl;
-		} else {
-			conn->out() << "<p>Welcome <b>" << user << "</b>!</p>" << std::endl;
-		}
-
-		conn->out()
-			<< "<script src=\"/ofdx/js/ofdx_async.js\"></script>" << std::endl
-			<< "<script src=\"/ofdx/aaa/ofdx_auth.js\"></script>" << std::endl;
 
 		conn->out() << "</body></html>";
 	}

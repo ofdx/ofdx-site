@@ -209,44 +209,17 @@ public:
 
 		if(SCRIPT_NAME == URL_LOGIN){
 			loginResponse(conn);
-			return;
 		} else if(SCRIPT_NAME == URL_LOGOUT){
 			rmSid(session);
 			logoutResponse(conn);
-			return;
-		}
-
-		conn->out()
-			<< "Content-Type: text/html; charset=utf-8\r\n"
-			<< "\r\n";
-
-		conn->out()
-			<< "<!DOCTYPE html>" << std::endl
-			<< "<html><head>" << std::endl
-			<< "<title>OFDX AAA</title>" << std::endl
-			<< "</head><body>" << std::endl
-			<< "<p><i>Thanking you!</i></p>" << std::endl;
-
-		if(user.empty()){
-			// Display a login form
-			conn->out()
-				<< "<form id=ofdx_login method=POST action=" << URL_LOGIN << ">"
-				<< "<label for=" << OFDX_USER << ">Username: </label><input id=" << OFDX_USER << " name=" << OFDX_USER << "><br>"
-				<< "<label for=" << OFDX_PASS << ">Password: </label><input id=" << OFDX_PASS << " name=" << OFDX_PASS << " type=password><br>"
-				//<< "<input type=hidden name=" << OFDX_REDIR << " value=/notes/>"
-				<< "<input type=submit value=\"Login\"><br>"
-				<< "</form>" << std::endl;
 		} else {
+			// 404 for all other URIs
 			conn->out()
-				<< "<p>Welcome <b>" << user << "</b>!</p>" << std::endl
-				<< "<p><a href=\"" << URL_LOGOUT << "\">Click here</a> to logout.</p>" << std:: endl;
+				<< "Status: 404 Not Found\r\n"
+				<< "Content-Type: text/plain; charset=utf-8\r\n"
+				<< "\r\n"
+				<< "You peer deeply into the darkness, yet detect nothing.";
 		}
-
-		conn->out()
-			<< "<script src=\"/ofdx/js/ofdx_async.js\"></script>" << std::endl
-			<< "<script src=\"/ofdx/aaa/ofdx_auth.js\"></script>" << std::endl;
-
-		conn->out() << "</body></html>";
 	}
 };
 
