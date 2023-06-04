@@ -54,15 +54,4 @@ public:
 
 };
 
-class CmdConnection : public Connection {
-	std::unordered_map<std::string, std::string> *m_pSessionTable;
-
-public:
-	CmdConnection(std::unordered_map<std::string, std::string> *sessionTable) :
-		m_pSessionTable(sessionTable)
-	{}
-
-	bool receiveCmd(bool & modified);
-};
-
 #endif

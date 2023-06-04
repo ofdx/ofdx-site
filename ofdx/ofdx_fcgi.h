@@ -10,6 +10,9 @@
 
 #define PORT_OFDX_SOMENOTES         9010
 
+#define OFDX_FILE_CRED "cred"
+#define OFDX_FILE_SESS "sess"
+
 std::string const PATH_OFDX_AAA("/aaa/");
 std::string const PATH_OFDX_SOMENOTES("/notes/");
 
@@ -20,8 +23,6 @@ std::string const OFDX_REDIR("ofdx_redir");
 
 std::string const URL_LOGIN(PATH_OFDX_AAA + "login/");
 std::string const URL_LOGOUT(PATH_OFDX_AAA + "logout/");
-
-
 
 struct OfdxBaseConfig {
 	std::string m_addr;
