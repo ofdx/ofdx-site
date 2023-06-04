@@ -1,4 +1,4 @@
-SOMENOTES=somenotes
+SOMENOTES=ofdx_somenotes
 GPP=g++ -std=c++17 -I../ -I../dmitigr_fcgi/src/
 
 all: ${SOMENOTES}
