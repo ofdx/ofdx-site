@@ -5,15 +5,14 @@
    Authentication system, with a web interface for login/logout via FastCGI.
 */
 
-#include "fcgi/fcgi.hpp"
 #include "base64.h"
+#include "ofdx/ofdx_fcgi.h"
 
 #include <iostream>
 #include <sstream>
 #include <fstream>
 #include <unordered_map>
 
-#include "ofdx/ofdx_fcgi.h"
 
 std::string const OFDX_AUTH("ofdx_auth");
 
@@ -39,7 +38,7 @@ class OfdxAaa : public OfdxFcgiService {
 
 public:
 	OfdxAaa() :
-		OfdxFcgiService(9000, "/aaa/")
+		OfdxFcgiService(PORT_OFDX_AAA, "/aaa/")
 	{}
 
 	bool processCliArguments(int argc, char **argv) override {

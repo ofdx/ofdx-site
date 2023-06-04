@@ -11,7 +11,7 @@ clean:
 run: all stop
 	sleep 1
 	( ./${APP} "datapath /home/mike/test/db/aaa/" ) &
-	( ./${SESSION_MGR} ) &
+	( ./${SESSION_MGR} "datapath /home/mike/test/db/aaa/" ) &
 
 stop:
 	( killall -q ${APP} ) &
@@ -22,5 +22,5 @@ ${APP}: main.cc ../ofdx/* ../renényffenegger/rene.o
 	${GPP} -o ${APP} main.cc ../renényffenegger/rene.o
 
 # Session manager service
-${SESSION_MGR}: session_manager.cc connection.* tcpListener.* ../renényffenegger/rene.o
+${SESSION_MGR}: session_manager.cc connection.* tcpListener.* ../ofdx/* ../renényffenegger/rene.o
 	${GPP} -o ${SESSION_MGR} session_manager.cc connection.cc tcpListener.cc ../renényffenegger/rene.o

@@ -9,13 +9,12 @@
    SomeNotes!
 */
 
-#include "fcgi/fcgi.hpp"
+#include "ofdx/ofdx_fcgi.h"
 
 #include <iostream>
 #include <sstream>
 #include <filesystem>
 
-#include "ofdx/ofdx_fcgi.h"
 
 class OfdxSomeNotes : public OfdxFcgiService {
 public:

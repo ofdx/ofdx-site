@@ -3,6 +3,14 @@
    mperron (2023)
 */
 
+#include "fcgi/fcgi.hpp"
+
+#define PORT_OFDX_AAA               9000
+#define PORT_OFDX_AAA_SESSION_MGR   9001
+
+#define PORT_OFDX_SOMENOTES         9010
+
+
 struct OfdxBaseConfig {
 	std::string m_addr;
 	int m_port, m_backlog;
@@ -120,7 +128,7 @@ public:
 		std::stringstream css;
 		FILE *p = NULL;
 
-		css << "cat << E=O=F | nc localhost 9001\n"
+		css << "cat << E=O=F | nc localhost " << PORT_OFDX_AAA_SESSION_MGR << "\n"
 			<< query << "\n\n"
 			<< "E=O=F";
 

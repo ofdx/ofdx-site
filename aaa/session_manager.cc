@@ -15,7 +15,7 @@
 
 #include "tcpListener.h"
 
-// Listen on port 9001/TCP.
+#include "ofdx/ofdx_fcgi.h"
 
 /*
 // Create session
@@ -29,17 +29,16 @@ SESSION DELETE $id
 
 */
 
-std::string const SESSION_DATABASE_FILENAME(std::string("/home/mike/test/db/aaa/") + "sess");
-
 class OfdxSessionManager {
-
 	TcpListener m_listener;
+	OfdxBaseConfig m_cfg;
 
 	// Key is session ID, value is user name.
 	std::unordered_map<std::string, std::string> m_sessionTable;
 
+	// Read existing sessions from the file on disk.
 	void load(){
-		std::ifstream infile(SESSION_DATABASE_FILENAME);
+		std::ifstream infile(m_cfg.m_dataPath + "sess");
 
 		// Read all existing sessions.
 		if(infile){
@@ -55,8 +54,9 @@ class OfdxSessionManager {
 		}
 	}
 
+	// Update file on disk to match our current session cache structure.
 	void save(){
-		std::ofstream outfile(SESSION_DATABASE_FILENAME);
+		std::ofstream outfile(m_cfg.m_dataPath + "sess");
 
 		// Write table to disk, replacing existing data.
 		if(outfile){
@@ -67,9 +67,12 @@ class OfdxSessionManager {
 	}
 
 public:
-	OfdxSessionManager() :
-		m_listener(9001, true)
+	OfdxSessionManager(int argc, char **argv) :
+		m_listener(PORT_OFDX_AAA_SESSION_MGR, true),
+		m_cfg(PORT_OFDX_AAA_SESSION_MGR, "")
 	{
+		// datapath must be set on the command line.
+		m_cfg.processCliArguments(argc, argv);
 		load();
 	}
 
@@ -88,7 +91,7 @@ public:
 };
 
 int main(int argc, char **argv){
-	OfdxSessionManager server;
+	OfdxSessionManager server(argc, argv);
 
 	while(server.run());
 	return 0;
