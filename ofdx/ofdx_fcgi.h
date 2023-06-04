@@ -115,4 +115,31 @@ public:
 
 		return true;
 	}
+
+	bool querySessionDatabase(std::string const& query, std::string & result) const {
+		std::stringstream css;
+		FILE *p = NULL;
+
+		css << "cat << E=O=F | nc localhost 9001\n"
+			<< query << "\n\n"
+			<< "E=O=F";
+
+		if(p = popen(css.str().c_str(), "r")){
+			size_t n = 1024;
+			char *raw = (char*) calloc(n, sizeof(char));
+
+			getline(&raw, &n, p);
+			if(char *s = strpbrk(raw, "\r\n"))
+				*s = 0;
+
+			result.assign(raw);
+
+			free(raw);
+			pclose(p);
+
+			return !result.empty();
+		}
+
+		return false;
+	}
 };

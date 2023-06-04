@@ -19,132 +19,27 @@ std::string const OFDX_AUTH("ofdx_auth");
 
 class OfdxAaa : public OfdxFcgiService {
 
-	size_t m_sizeOfSid;
-
-	void createRandomSid(std::string & data) const {
-		if(m_sizeOfSid > 0){
-			std::shared_ptr<unsigned char[]> raw(new unsigned char[m_sizeOfSid]);
-			std::ifstream infile("/dev/urandom");
-
-			if(raw && infile && infile.read((char*) raw.get(), m_sizeOfSid))
-				data = base64_encode(raw.get(), m_sizeOfSid, true);
-		}
-	}
-
 	// Create a session ID for the specified user and return it in SID. Returns
 	// false if the operation failed.
 	bool getSid(std::string const& user, std::string & sid) const {
-		std::unordered_map<std::string, std::string> sessionTable;
-		std::string const path(m_cfg.m_dataPath + "sess");
-		std::ifstream infile(path);
-
-		// Read all existing sessions.
-		if(infile){
-			std::string line;
-
-			while(getline(infile, line)){
-				std::stringstream ss(line);
-				std::string k, v;
-
-				if(ss >> k >> v)
-					sessionTable[k] = v;
-			}
-		}
-
-		// Try at most five times to create a unique SID. This should almost
-		// always work on the first try.
-		for(int attempts = 5; attempts > 0; -- attempts){
-			createRandomSid(sid);
-
-			// If the count is zero, this session ID is unique.
-			if(sessionTable.count(sid) == 0){
-				sessionTable[sid] = user;
-
-				std::ofstream outfile(path);
-				if(outfile){
-					for(auto const& el : sessionTable){
-						outfile << el.first << " " << el.second << std::endl;
-					}
-
-					// If we reached this point, the session ID should have
-					// successfully been persisted.
-					return true;
-				}
-			}
-		}
-
-		// Clear SID, we couldn't create a unique one. This should never happen.
-		sid = "";
-		return false;
+		return querySessionDatabase(std::string("CREATE ") + user, sid);
 	}
 
 	// Return the username associated with this active session ID.
 	bool getUser(std::string const& sid, std::string & user) const {
-		std::string const path(m_cfg.m_dataPath + "sess");
-		std::ifstream infile(path);
-
-		// Check session database.
-		if(infile){
-			std::string line;
-
-			while(getline(infile, line)){
-				std::stringstream ss(line);
-				std::string k, v;
-
-				// Return the username if we match.
-				if((ss >> k >> v) && (k == sid)){
-					user = v;
-					return true;
-				}
-			}
-		}
-
-		// The SID is not valid.
-		return false;
+		return querySessionDatabase(std::string("VERIFY ") + sid, user);
 	}
 
 	// Remove the session ID from the database (logout).
 	void rmSid(std::string const& sid) const {
-		std::unordered_map<std::string, std::string> sessionTable;
-		std::string const path(m_cfg.m_dataPath + "sess");
-		std::ifstream infile(path);
+		std::string result;
 
-		bool exists = false;
-
-		// Read all existing sessions.
-		if(infile){
-			std::string line;
-
-			while(getline(infile, line)){
-				std::stringstream ss(line);
-				std::string k, v;
-
-				if(ss >> k >> v){
-					if(k == sid){
-						exists = true;
-					} else {
-						sessionTable[k] = v;
-					}
-				}
-			}
-		}
-
-		// If the count is zero, this session ID is unique.
-		if(exists){
-			std::ofstream outfile(path);
-
-			if(outfile){
-				for(auto const& el : sessionTable){
-					outfile << el.first << " " << el.second << std::endl;
-				}
-			}
-		}
+		querySessionDatabase(std::string("DELETE ") + sid, result);
 	}
 
 public:
 	OfdxAaa() :
-		OfdxFcgiService(9000, "/aaa/"),
-		m_sizeOfSid(256)
+		OfdxFcgiService(9000, "/aaa/")
 	{}
 
 	bool processCliArguments(int argc, char **argv) override {
