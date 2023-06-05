@@ -74,7 +74,7 @@ public:
 	void sendAuthorized(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn, std::string const& sid) const {
 		conn->out()
 			<< "Status: 204 No Content\r\n"
-			<< "Set-Cookie: " << OFDX_AUTH << "=" << sid << "; Path=/\r\n"
+			<< "Set-Cookie: " << OFDX_AUTH << "=" << sid << "; Path=/; Max-Age=" << (6 * 7 * 24 * 60 * 60) /* 6 weeks in seconds */ << "\r\n"
 			<< "\r\n";
 	}
 

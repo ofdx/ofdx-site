@@ -22,7 +22,7 @@ class OfdxSessionManager : public OfdxManagerMicro {
 
 	// Creates a unique session ID.
 	void createRandomSid(std::string & data){
-		size_t const sizeOfSid(256);
+		size_t const sizeOfSid(128);
 
 		std::shared_ptr<unsigned char[]> raw(new unsigned char[sizeOfSid]);
 		std::ifstream infile("/dev/urandom");
