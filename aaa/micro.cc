@@ -5,36 +5,6 @@
 
 #include "micro.h"
 
-#include <fstream>
-
-void OfdxManagerMicro::load(){
-	std::ifstream infile(m_kvPath);
-
-	if(infile){
-		std::string line;
-
-		while(getline(infile, line)){
-			std::stringstream ss(line);
-			std::string k, v;
-
-			if(ss >> k >> v)
-				m_kvStore[k] = v;
-		}
-	}
-}
-
-void OfdxManagerMicro::save(){
-	std::ofstream outfile(m_kvPath);
-
-	if(outfile){
-		for(auto const& el : m_kvStore)
-			outfile << el.first << " " << el.second << std::endl;
-
-		m_modified = false;
-	}
-}
-
-
 bool OfdxManagerMicro::MicroConnection::receiveCmd(){
 	prepareToRead();
 
@@ -73,9 +43,7 @@ bool OfdxManagerMicro::run(){
 	if(m_listener.accept(conn) >= 0)
 		while(conn.receiveCmd());
 
-	if(m_modified)
-		save();
+	persist();
 
 	return true;
 }
-

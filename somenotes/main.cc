@@ -35,7 +35,7 @@ public:
 			if(cookies.count(OFDX_AUTH)){
 				session = cookies[OFDX_AUTH];
 
-				if(!querySessionDatabase(std::string("VERIFY ") + session, user)){
+				if(!querySessionDatabase(std::string("SESSION VERIFY ") + session, user)){
 					session = "";
 					user = "";
 				}

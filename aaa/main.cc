@@ -18,20 +18,23 @@ class OfdxAaa : public OfdxFcgiService {
 
 	// Create a session ID for the specified user and return it in SID. Returns
 	// false if the operation failed.
-	bool getSid(std::string const& user, std::string & sid) const {
-		return querySessionDatabase(std::string("CREATE ") + user, sid);
+	bool getSid(std::string const& user, std::string const& key, std::string & sid) const {
+		std::stringstream qss;
+
+		qss << "SESSION CREATE " << user << " " << key;
+		return querySessionDatabase(qss.str(), sid);
 	}
 
 	// Return the username associated with this active session ID.
 	bool getUser(std::string const& sid, std::string & user) const {
-		return querySessionDatabase(std::string("VERIFY ") + sid, user);
+		return querySessionDatabase(std::string("SESSION VERIFY ") + sid, user);
 	}
 
 	// Remove the session ID from the database (logout).
 	void rmSid(std::string const& sid) const {
 		std::string result;
 
-		querySessionDatabase(std::string("DELETE ") + sid, result);
+		querySessionDatabase(std::string("SESSION DELETE ") + sid, result);
 	}
 
 public:
@@ -49,28 +52,6 @@ public:
 		}
 
 		return true;
-	}
-
-	// Check whether the provided user and authorization key combination is valid.
-	bool checkCredentials(std::string const& user, std::string const& auth) const {
-		std::ifstream infile(m_cfg.m_dataPath + "cred");
-
-		if(infile){
-			std::string line;
-
-			while(getline(infile, line)){
-				std::stringstream ss(line);
-				std::string k, v;
-
-				if(ss >> k >> v){
-					// Line has two words on it, could be "name key"
-					if((k == user) && (v == auth))
-						return true;
-				}
-			}
-		}
-
-		return false;
 	}
 
 	void sendBadRequest(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn) const {
@@ -152,10 +133,10 @@ public:
 					std::string http_auth_reencoded = base64_encode(user + ":" + pass);
 
 					// If the credentials are OK, report success
-					if(checkCredentials(user, http_auth_reencoded)){
+					{
 						std::string sid;
 
-						if(getSid(user, sid)){
+						if(getSid(user, http_auth_reencoded, sid)){
 							sendAuthorized(conn, sid);
 							return;
 						}
