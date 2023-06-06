@@ -24,6 +24,8 @@ std::string const OFDX_REDIR("ofdx_redir");
 std::string const URL_LOGIN(PATH_OFDX_AAA + "login/");
 std::string const URL_LOGOUT(PATH_OFDX_AAA + "logout/");
 
+std::string const URL_NOTES_DEBUG(PATH_OFDX_SOMENOTES + "debug/");
+
 struct OfdxBaseConfig {
 	std::string m_addr;
 	int m_port, m_backlog;

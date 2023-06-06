@@ -173,7 +173,6 @@ public:
 
 	void handleConnection(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn) override {
 		std::string const SCRIPT_NAME(conn->parameter("SCRIPT_NAME"));
-
 		parseCookies(conn);
 
 		if(SCRIPT_NAME == URL_LOGIN){
