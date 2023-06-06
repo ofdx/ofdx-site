@@ -25,16 +25,14 @@ class OfdxAaa : public OfdxFcgiService {
 		return querySessionDatabase(qss.str(), sid);
 	}
 
-	// Return the username associated with this active session ID.
-	bool getUser(std::string const& sid, std::string & user) const {
-		return querySessionDatabase(std::string("SESSION VERIFY ") + sid, user);
-	}
-
 	// Remove the session ID from the database (logout).
-	void rmSid(std::string const& sid) const {
-		std::string result;
+	void rmSid() const {
+		try{
+			std::string const session = m_cookies.at(OFDX_AUTH);
+			std::string result;
 
-		querySessionDatabase(std::string("SESSION DELETE ") + sid, result);
+			querySessionDatabase(std::string("SESSION DELETE ") + session, result);
+		} catch(...){}
 	}
 
 public:
@@ -176,22 +174,12 @@ public:
 	void handleConnection(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn) override {
 		std::string const SCRIPT_NAME(conn->parameter("SCRIPT_NAME"));
 
-		std::string user, session;
-		{
-			// Check cookies for session ID.
-			std::unordered_map<std::string, std::string> cookies;
-			parseCookies(conn, cookies);
-
-			if(cookies.count(OFDX_AUTH)){
-				session = cookies[OFDX_AUTH];
-				getUser(session, user);
-			}
-		}
+		parseCookies(conn);
 
 		if(SCRIPT_NAME == URL_LOGIN){
 			loginResponse(conn);
 		} else if(SCRIPT_NAME == URL_LOGOUT){
-			rmSid(session);
+			rmSid();
 			logoutResponse(conn);
 		} else {
 			// 404 for all other URIs

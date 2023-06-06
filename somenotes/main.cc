@@ -26,21 +26,7 @@ public:
 	}
 
 	void handleConnection(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn) override {
-		std::string user, session;
-		{
-			// Check cookies for session ID.
-			std::unordered_map<std::string, std::string> cookies;
-			parseCookies(conn, cookies);
-
-			if(cookies.count(OFDX_AUTH)){
-				session = cookies[OFDX_AUTH];
-
-				if(!querySessionDatabase(std::string("SESSION VERIFY ") + session, user)){
-					session = "";
-					user = "";
-				}
-			}
-		}
+		parseCookies(conn);
 
 		conn->out()
 			<< "Content-Type: text/html; charset=utf-8\r\n"
@@ -55,7 +41,7 @@ public:
 			<< "<script src=\"/ofdx/aaa/ofdx_auth.js\"></script>" << std::endl;
 
 		// Hide everything behind authorization.
-		if(user.empty()){
+		if(m_authUser.empty()){
 			conn->out()
 				<< "<form id=ofdx_login method=POST action=" << URL_LOGIN << ">"
 				<< "<label for=" << OFDX_USER << ">Username: </label><input id=" << OFDX_USER << " name=" << OFDX_USER << "><br>"
@@ -68,7 +54,7 @@ public:
 
 		// Greeting and logout link.
 		conn->out()
-			<< "<p>Welcome <b>" << user << "</b>!</p>" << std::endl
+			<< "<p>Welcome <b>" << m_authUser << "</b>!</p>" << std::endl
 			<< "<p><a href=\"" << URL_LOGOUT << "\">Logout</a>.</p>" << std::endl;
 
 

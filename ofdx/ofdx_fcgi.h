@@ -79,10 +79,19 @@ class OfdxFcgiService {
 protected:
 	OfdxBaseConfig m_cfg;
 	std::shared_ptr<dmitigr::fcgi::Listener> m_pServer;
+	std::unordered_map<std::string, std::string> m_cookies;
+
+	std::string m_authUser;
+
 
 	virtual void handleConnection(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn) = 0;
 
-	void parseCookies(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn, std::unordered_map<std::string, std::string> & cookies) const {
+	void parseCookies(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn){
+		std::string session;
+
+		// Erase anything that might be in here from a previous connection.
+		m_cookies.clear();
+
 		try {
 			std::string http_cookie(conn->parameter("HTTP_COOKIE"));
 			std::stringstream http_cookie_ss(http_cookie);
@@ -98,11 +107,22 @@ protected:
 					}
 				}
 
-				if((n > 0) && (n < cookie.size() - 1))
-					cookies[cookie.substr(0, n)] = cookie.substr(n + 1);
+				if((n > 0) && (n < cookie.size() - 1)){
+					std::string const k(cookie.substr(0, n)), v(cookie.substr(n + 1));
+
+					m_cookies[k] = v;
+
+					if(k == OFDX_AUTH)
+						session = v;
+				}
 			}
 
 		} catch(...){}
+
+		// Set m_authUser to the authenticated user's name if one is logged in.
+		if(!(session.size() && querySessionDatabase(std::string("SESSION VERIFY ") + session, m_authUser))){
+			m_authUser = "";
+		}
 	}
 
 public:
