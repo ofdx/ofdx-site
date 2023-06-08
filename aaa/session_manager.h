@@ -10,11 +10,46 @@
 #include <fstream>
 #include <sstream>
 
+#include <ctime>
+
 #include "base64.h"
 #include "micro.h"
 
 class OfdxSessionManager : public OfdxManagerMicro {
-	std::unordered_map<std::string, std::string> m_sessionTable, m_credentialTable;
+	struct OfdxSessionData {
+		time_t m_expirationTime;
+		std::string m_id, m_user;
+
+		OfdxSessionData(time_t const expirationTime, std::string const& id, std::string const& user) :
+			m_expirationTime(expirationTime),
+			m_id(id),
+			m_user(user)
+		{}
+
+		OfdxSessionData() :
+			OfdxSessionData(0, "", "")
+		{}
+
+		OfdxSessionData(OfdxSessionData const& other){
+			m_expirationTime = other.m_expirationTime;
+			m_id = other.m_id;
+			m_user = other.m_user;
+		}
+
+		bool parse(std::stringstream & ss){
+			if(ss >> m_expirationTime >> m_id >> m_user)
+				return true;
+
+			return false;
+		}
+
+		void write(std::ofstream & ss) const {
+			ss << m_expirationTime << " " << m_id << " " << m_user << std::endl;
+		}
+	};
+
+	std::unordered_map<std::string, std::shared_ptr<OfdxSessionData>> m_sessionTable;
+	std::unordered_map<std::string, std::string> m_credentialTable;
 
 	bool m_modifiedSessionTable;
 	bool m_modifiedCredentialTable;
