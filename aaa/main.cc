@@ -8,9 +8,6 @@
 #include "base64.h"
 #include "ofdx/ofdx_fcgi.h"
 
-#include <iostream>
-#include <sstream>
-#include <fstream>
 #include <unordered_map>
 
 
@@ -36,12 +33,14 @@ class OfdxAaa : public OfdxFcgiService {
 	}
 
 public:
+	struct OfdxBaseConfig m_cfg;
+
 	OfdxAaa() :
-		OfdxFcgiService(PORT_OFDX_AAA, PATH_OFDX_AAA)
+		m_cfg(PORT_OFDX_AAA, PATH_OFDX_AAA)
 	{}
 
-	bool processCliArguments(int argc, char **argv) override {
-		if(OfdxFcgiService::processCliArguments(argc, argv)){
+	bool processCliArguments(int argc, char **argv){
+		if(m_cfg.processCliArguments(argc, argv)){
 			// Database path must be set...
 			if(m_cfg.m_dataPath.empty()){
 				std::cerr << "Error: datapath must be set";
@@ -203,7 +202,7 @@ int main(int argc, char **argv){
 	if(!app.processCliArguments(argc, argv))
 		return 1;
 
-	app.listen();
+	app.listen(app.m_cfg);
 
 	while(app.accept());
 

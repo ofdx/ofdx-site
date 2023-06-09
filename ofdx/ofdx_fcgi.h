@@ -5,6 +5,10 @@
 
 #include "fcgi/fcgi.hpp"
 
+#include <iostream>
+#include <fstream>
+#include <sstream>
+
 #define PORT_OFDX_AAA               9000
 #define PORT_OFDX_AAA_SESSION_MGR   9001
 
@@ -79,7 +83,6 @@ struct OfdxBaseConfig {
 
 class OfdxFcgiService {
 protected:
-	OfdxBaseConfig m_cfg;
 	std::shared_ptr<dmitigr::fcgi::Listener> m_pServer;
 	std::unordered_map<std::string, std::string> m_cookies;
 
@@ -127,19 +130,45 @@ protected:
 		}
 	}
 
-public:
-	OfdxFcgiService(int const port, std::string const& baseUriPath) :
-		m_cfg(port, baseUriPath)
-	{}
+	// Callback for template processing. If a document contains "<?ofdx example tpl here>" then text will contain " example tpl here".
+	virtual void fillTemplate(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn, std::string const& text){}
 
-	virtual bool processCliArguments(int argc, char **argv){
-		return m_cfg.processCliArguments(argc, argv);
+	void serveTemplatedDocument(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn, std::ifstream & infile){
+		if(infile){
+			std::string const keystr("<?ofdx");
+			std::string line;
+
+			while(std::getline(infile, line)){
+				// Look for template and if found, call the replacement function.
+				auto a = line.find(keystr);
+
+				if(a != std::string::npos){
+					auto const b = line.find('>', a);
+
+					if(b != std::string::npos){
+						conn->out() << line.substr(0, a);
+
+						a += keystr.length();
+
+						std::string const text(line.substr(a, (b - a)));
+
+						fillTemplate(conn, text);
+						conn->out() << line.substr(b + 1) << std::endl;
+
+						continue;
+					}
+				}
+
+				conn->out() << line << std::endl;
+			}
+		}
 	}
 
-	void listen(){
+public:
+	void listen(OfdxBaseConfig const& cfg){
 		if(!m_pServer){
 			dmitigr::fcgi::Listener_options options {
-				m_cfg.m_addr, m_cfg.m_port, m_cfg.m_backlog
+				cfg.m_addr, cfg.m_port, cfg.m_backlog
 			};
 
 			m_pServer = std::make_shared<dmitigr::fcgi::Listener>(options);

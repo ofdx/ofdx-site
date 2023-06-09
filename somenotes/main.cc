@@ -11,8 +11,6 @@
 
 #include "ofdx/ofdx_fcgi.h"
 
-#include <iostream>
-#include <sstream>
 #include <filesystem>
 
 
@@ -81,11 +79,30 @@ class OfdxSomeNotes : public OfdxFcgiService {
 		}
 	}
 
+	void fillTemplate(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn, std::string const& text) override {
+		std::stringstream tss(text);
+		std::string word;
 
+		while(tss >> word)
+			conn->out() << "[" << word << "] ";
+	}
 
 public:
+	struct Config : public OfdxBaseConfig {
+		std::string m_templatePath;
+
+		Config(int port, std::string const& baseUriPath) :
+			OfdxBaseConfig(port, baseUriPath)
+		{}
+
+		void receiveCliArgument(std::string const& k, std::string const& v) override {
+			if(k == "templatepath")
+				m_templatePath.assign(v);
+		}
+	} m_cfg;
+
 	OfdxSomeNotes() :
-		OfdxFcgiService(PORT_OFDX_SOMENOTES, PATH_OFDX_SOMENOTES)
+		m_cfg(PORT_OFDX_SOMENOTES, PATH_OFDX_SOMENOTES)
 	{
 		// FIXME debug
 		m_cfg.m_dataPath = "./";
@@ -95,7 +112,21 @@ public:
 		std::string const SCRIPT_NAME(conn->parameter("SCRIPT_NAME"));
 		parseCookies(conn);
 
-		if(SCRIPT_NAME == URL_NOTES_DEBUG){
+		if(SCRIPT_NAME == PATH_OFDX_SOMENOTES){
+			std::ifstream infile(m_cfg.m_templatePath + "home.html");
+
+			if(infile){
+				conn->out()
+					<< "Content-Type: text/html; charset=utf-8\r\n"
+					<< "\r\n";
+
+				serveTemplatedDocument(conn, infile);
+			} else {
+				conn->out()
+					<< "Status: 404 Not Found\r\n"
+					<< "\r\n";
+			}
+		} else if(SCRIPT_NAME == URL_NOTES_DEBUG){
 			if(m_authUser.empty()){
 				// Show login page...
 				loginResponse(conn);
@@ -119,10 +150,10 @@ int main(int argc, char **argv){
 	OfdxSomeNotes app;
 
 	// Get config overrides from the CLI arguments.
-	if(!app.processCliArguments(argc, argv))
+	if(!app.m_cfg.processCliArguments(argc, argv))
 		return 1;
 
-	app.listen();
+	app.listen(app.m_cfg);
 
 	while(app.accept());
 
