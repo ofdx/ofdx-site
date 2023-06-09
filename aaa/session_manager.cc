@@ -8,8 +8,8 @@
 	// Clean up expired sessions
 	SESSION CLEAN
 
-	// Create session - requires authentication key
-	SESSION CREATE $name $key
+	// Create session - requires authentication key, optional client IP address
+	SESSION CREATE $name $key [$addr]
 
 	// Verify session
 	SESSION VERIFY $id
@@ -63,9 +63,15 @@ void OfdxSessionManager::processCmdSession(std::stringstream & cmd, std::strings
 							createRandomSid(sid);
 
 							if(m_sessionTable.count(sid) == 0){
-								time_t expires = time(nullptr) + (6 * 7 * 24 * 60 * 60); /*  6 weeks */
+								time_t now = time(nullptr);
+								time_t expires = now + (6 * 7 * 24 * 60 * 60); /*  6 weeks */
 
-								m_sessionTable[sid] = std::make_shared<OfdxSessionManager::OfdxSessionData>(expires, sid, arg);
+								std::string addr;
+
+								// Get the client IP address if it was provided.
+								cmd >> addr;
+
+								m_sessionTable[sid] = std::make_shared<OfdxSessionManager::OfdxSessionData>(now, expires, sid, arg, addr);
 								m_modifiedSessionTable = true;
 
 								response << sid;
@@ -132,6 +138,9 @@ void OfdxSessionManager::loadSessions(){
 		std::string line;
 
 		while(getline(infile, line)){
+			if(line.empty() || (line[0] == '#'))
+				continue;
+
 			OfdxSessionManager::OfdxSessionData data;
 			std::stringstream ss(line);
 
@@ -146,6 +155,8 @@ void OfdxSessionManager::saveSessions(){
 	std::ofstream outfile(m_cfg.m_dataPath + OFDX_FILE_SESS);
 
 	if(outfile){
+		outfile << "# startTime expirationTime id user addr" << std::endl;
+
 		for(auto const& el : m_sessionTable)
 			el.second->write(outfile);
 

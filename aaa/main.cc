@@ -18,10 +18,10 @@ class OfdxAaa : public OfdxFcgiService {
 
 	// Create a session ID for the specified user and return it in SID. Returns
 	// false if the operation failed.
-	bool getSid(std::string const& user, std::string const& key, std::string & sid) const {
+	bool getSid(std::string const& user, std::string const& addr, std::string const& key, std::string & sid) const {
 		std::stringstream qss;
 
-		qss << "SESSION CREATE " << user << " " << key;
+		qss << "SESSION CREATE " << user << " " << key << " " << addr;
 		return querySessionDatabase(qss.str(), sid);
 	}
 
@@ -64,7 +64,7 @@ public:
 		conn->out()
 			<< "Status: 401 Unauthorized\r\n"
 			<< "Content-Type: text/plain; charset=utf-8\r\n"
-			<< "Set-Cookie: " << OFDX_AUTH << "=" << "" << "; Path=/; Max-Age=0\r\n"
+			<< "Set-Cookie: " << OFDX_AUTH << "=" << "" << "; SameSite=Strict; Path=/; Max-Age=0\r\n"
 			<< "\r\n"
 			<< "Invalid user name or password." << std::endl;
 	}
@@ -72,7 +72,7 @@ public:
 	void sendAuthorized(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn, std::string const& sid) const {
 		conn->out()
 			<< "Status: 204 No Content\r\n"
-			<< "Set-Cookie: " << OFDX_AUTH << "=" << sid << "; Path=/; Max-Age=" << (6 * 7 * 24 * 60 * 60) /* 6 weeks in seconds */ << "\r\n"
+			<< "Set-Cookie: " << OFDX_AUTH << "=" << sid << "; SameSite=Strict; Path=/; Max-Age=" << (6 * 7 * 24 * 60 * 60) /* 6 weeks in seconds */ << "\r\n"
 			<< "\r\n";
 	}
 
@@ -132,9 +132,14 @@ public:
 
 					// If the credentials are OK, report success
 					{
-						std::string sid;
+						std::string sid, addr;
 
-						if(getSid(user, http_auth_reencoded, sid)){
+						// Fill in the client IP address if available.
+						try {
+							addr = conn->parameter("REMOTE_ADDR");
+						} catch(...){}
+
+						if(getSid(user, addr, http_auth_reencoded, sid)){
 							sendAuthorized(conn, sid);
 							return;
 						}
@@ -167,7 +172,7 @@ public:
 		conn->out()
 			<< "Status: 302 Found\r\n"
 			<< "Location: " << referer << "\r\n"
-			<< "Set-Cookie: " << OFDX_AUTH << "=" << "" << "; Path=/; Max-Age=0\r\n"
+			<< "Set-Cookie: " << OFDX_AUTH << "=" << "" << "; SameSite=Strict; Path=/; Max-Age=0\r\n"
 			<< "\r\n";
 	}
 

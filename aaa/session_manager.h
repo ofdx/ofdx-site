@@ -17,34 +17,42 @@
 
 class OfdxSessionManager : public OfdxManagerMicro {
 	struct OfdxSessionData {
-		time_t m_expirationTime;
-		std::string m_id, m_user;
+		time_t m_startTime, m_expirationTime;
+		std::string m_id, m_user, m_addr;
 
-		OfdxSessionData(time_t const expirationTime, std::string const& id, std::string const& user) :
+		OfdxSessionData(time_t const startTime, time_t const expirationTime, std::string const& id, std::string const& user, std::string const& addr) :
+			m_startTime(startTime),
 			m_expirationTime(expirationTime),
 			m_id(id),
-			m_user(user)
+			m_user(user),
+			m_addr(addr)
 		{}
 
 		OfdxSessionData() :
-			OfdxSessionData(0, "", "")
+			OfdxSessionData(0, 0, "", "", "")
 		{}
 
 		OfdxSessionData(OfdxSessionData const& other){
+			m_startTime = other.m_startTime;
 			m_expirationTime = other.m_expirationTime;
 			m_id = other.m_id;
 			m_user = other.m_user;
+			m_addr = other.m_addr;
 		}
 
 		bool parse(std::stringstream & ss){
-			if(ss >> m_expirationTime >> m_id >> m_user)
+			if(ss >> m_startTime >> m_expirationTime >> m_id >> m_user >> m_addr)
 				return true;
 
 			return false;
 		}
 
 		void write(std::ofstream & ss) const {
-			ss << m_expirationTime << " " << m_id << " " << m_user << std::endl;
+			ss
+				<< m_startTime << " " << m_expirationTime << " "
+				<< m_id << " " << m_user
+				<< " " << (m_addr.empty() ? std::string("[]") : m_addr)
+				<< std::endl;
 		}
 	};
 
