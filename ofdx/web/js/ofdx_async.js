@@ -15,9 +15,12 @@ var OfdxAsync = {
 		this.method = (meta.method) ? meta.method : "GET";
 		this.target = meta.target;
 
-		http.onreadystatechange = function(){
-			if(meta.onreadystatechange)
-				return meta.onreadystatechange(http);
+		var post = (this.method === "POST") ? meta.post : undefined;
+
+		http.open(this.method, this.target, true);
+		http.onload = function(xhrEvent){
+			if(meta.onload)
+				return meta.onload(http, xhrEvent);
 
 			if(http.readyState === 4){
 				switch(http.status){
@@ -33,11 +36,13 @@ var OfdxAsync = {
 				if(meta.completion)
 					meta.completion(http);
 			}
-		}
+		};
+		http.onerror = function(xhrEvent){
+			if(meta.onerror)
+				return meta.onerror(http, xhrEvent);
 
-		var post = (this.method === "POST") ? meta.post : undefined;
-
-		http.open(this.method, this.target, false);
+			console.log(http.statusText);
+		};
 
 		if(meta.auth){
 			http.setRequestHeader(
