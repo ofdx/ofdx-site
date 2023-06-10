@@ -1,13 +1,12 @@
 <!DOCTYPE html>
 <html><head>
+	<?ofdx template layout/base_head_begin.html>
 	<title>OFDX</title>
-	<meta charset=utf-8>
-	<style>
-	.img_pixelated {
-		image-rendering: pixelated;
-	}
-	</style>
+
+	<?ofdx template layout/base_head_end.html>
 </head><body>
-	<p><img class="img_pixelated" src="/floppy-1.png"> SomeNotes&trade;</p>
-	<?ofdx template test>
+	<h1><img class="img_pixelated" src="/floppy-1.png"> SomeNotes&trade;</h1>
+	<p>When <i>one note</i> is not enough.</p>
+
+	<?ofdx template layout/base_body_end.html>
 </body></html>

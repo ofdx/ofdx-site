@@ -16,60 +16,59 @@
 
 class OfdxSomeNotes : public OfdxFcgiService {
 	void debugResponse(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn){
-		std::ifstream infile(m_cfg.m_templatePath + "debug/infopage.html");
-
-		if(infile)
-			serveTemplatedDocument(conn, infile);
-		else
+		if(!serveTemplatedDocument(conn, (m_cfg.m_templatePath + "debug/infopage.html"), true))
 			serve404(conn);
 	}
 
 	void loginResponse(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn){
-		std::ifstream infile(m_cfg.m_templatePath + "login.html");
+		if(m_authUser.empty() && serveTemplatedDocument(conn, (m_cfg.m_templatePath + "login.html"), true))
+			return;
 
-		if(infile && m_authUser.empty()){
-			serveTemplatedDocument(conn, infile);
-		} else {
-			conn->out()
-				<< "Status: 500 Error\r\n"
-				<< "Content-Type: text/plain; charset=utf-8\r\n"
-				<< "\r\n"
-				<< "Something unexpected happened.";
-		}
+		conn->out()
+			<< "Status: 500 Error\r\n"
+			<< "Content-Type: text/plain; charset=utf-8\r\n"
+			<< "\r\n"
+			<< "Something unexpected happened.";
 	}
 
 	void fillTemplate(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn, std::string const& text) override {
 		std::stringstream tss(text);
-		std::string area;
+		std::string word;
 
-		if(tss >> area){
-			if(area == "auth"){
+		if(tss >> word){
+			if(word == "template"){
+				// Load a file (which can itself also be templated)
+				if(!(tss >> word))
+					return;
+
+				serveTemplatedDocument(conn, (m_cfg.m_templatePath + word));
+			} else if(word == "auth"){
 				// Related to authentication in some way.
-				if(!(tss >> area))
+				if(!(tss >> word))
 					return;
 
 				// Replace with the authenticated user's name
-				if(area == "user")
+				if(word == "user")
 					conn->out() << m_authUser;
 
-			} else if(area == "debug"){
+			} else if(word == "debug"){
 				// Debug stuff, probably going to be removed in the future.
-				if(!(tss >> area))
+				if(!(tss >> word))
 					return;
 
-				if(area == "table"){
-					if(!(tss >> area))
+				if(word == "table"){
+					if(!(tss >> word))
 						return;
 
 					// Display a debug informational table.
-					if(area == "parameters"){
+					if(word == "parameters"){
 						// Table of all parameters sent via FCGI
 						conn->out() << "<table><tr><th>Name</th><th>Value</th></tr>";
 						for(auto i = 0; i < conn->parameter_count(); ++ i){
 							conn->out() << "<tr><td>" << conn->parameter_name(i) << "</td><td>" << conn->parameter(i) << "</td></tr>";
 						}
 						conn->out() << "</table>";
-					} else if(area == "files"){
+					} else if(word == "files"){
 						// Dump out all of the files in the working directory.
 						conn->out() << "<table><tr><th>Filename</th><th>Size</th><th>Path</th></tr>";
 
@@ -83,17 +82,13 @@ class OfdxSomeNotes : public OfdxFcgiService {
 
 						conn->out() << "</table>";
 					}
-				} else if(area == "isauthd"){
+				} else if(word == "isauthd"){
 					// Serve the next templated file if the user is authenticated.
 					if(!m_authUser.empty()){
 						std::string fname;
 
-						if(tss >> fname){
-							std::ifstream infile(m_cfg.m_templatePath + fname);
-
-							if(infile)
-								serveTemplatedDocument(conn, infile);
-						}
+						if(tss >> fname)
+							serveTemplatedDocument(conn, (m_cfg.m_templatePath + fname));
 					}
 				}
 			}
@@ -101,14 +96,9 @@ class OfdxSomeNotes : public OfdxFcgiService {
 	}
 
 	void serve404(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn){
-		std::ifstream infile(m_cfg.m_templatePath + "404.html");
-
-		if(infile){
-			serveTemplatedDocument(conn, infile);
-		} else {
+		if(!serveTemplatedDocument(conn, (m_cfg.m_templatePath + "404.html")))
 			// Misconfiguration or missing file...
 			conn->out() << "Status: 404\r\n\r\n";
-		}
 	}
 
 public:
@@ -139,15 +129,9 @@ public:
 		if(SCRIPT_NAME == PATH_OFDX_SOMENOTES){
 			std::ifstream infile(m_cfg.m_templatePath + "home.html");
 
-			if(infile){
-				conn->out()
-					<< "Content-Type: text/html; charset=utf-8\r\n"
-					<< "\r\n";
-
-				serveTemplatedDocument(conn, infile);
-			} else {
+			if(!serveTemplatedDocument(conn, (m_cfg.m_templatePath + "home.html"), true))
 				serve404(conn);
-			}
+
 		} else if(SCRIPT_NAME == URL_NOTES_DEBUG){
 			if(m_authUser.empty()){
 				// Show login page...

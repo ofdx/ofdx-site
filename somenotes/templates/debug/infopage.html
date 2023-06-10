@@ -1,11 +1,10 @@
-Content-Type: text/html; charset=utf-8
-
 <!DOCTYPE html>
 <html><head>
+	<?ofdx template layout/base_head_begin.html>
 	<title>OFDX - Debug</title>
-	<meta charset=utf-8>
+	<?ofdx template layout/base_head_end.html>
 </head><body>
-	<h1>OFDX SomeNotes Debug Info</h1>
+	<h1><img class=img_pixelated src=/floppy-1.png> OFDX SomeNotes Debug Info</h1>
 	<?ofdx debug isauthd debug/isauthd_test.html>
 
 	<h2>Connection Parameters</h2>
@@ -14,4 +13,5 @@ Content-Type: text/html; charset=utf-8
 	<h2>Local Files</h2>
 	<?ofdx debug table files>
 
+	<?ofdx template layout/base_body_end.html>
 </body></html>

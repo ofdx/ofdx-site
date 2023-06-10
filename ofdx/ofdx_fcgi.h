@@ -159,13 +159,22 @@ protected:
 		conn->out() << line << std::endl;
 	}
 
-	void serveTemplatedDocument(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn, std::ifstream & infile){
+	bool serveTemplatedDocument(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn, std::string fname, bool includeHtmlContentType = false){
+		std::ifstream infile(fname);
+
 		if(infile){
 			std::string line;
 
+			if(includeHtmlContentType)
+				conn->out() << "Content-Type: text/html; charset=utf-8" << std::endl << std::endl;
+
 			while(std::getline(infile, line))
 				parseTemplateLine(conn, line);
+
+			return true;
 		}
+
+		return false;
 	}
 
 public:
