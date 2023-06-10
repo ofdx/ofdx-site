@@ -114,7 +114,7 @@ void OfdxSessionManager::processCmdCredential(std::stringstream & cmd, std::stri
 	std::string op, arg;
 
 	if(cmd >> op >> arg){
-		// TODO ...
+		// TODO ... add/edit/remove credentials
 	}
 }
 

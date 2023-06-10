@@ -202,14 +202,14 @@ public:
 	}
 
 	bool querySessionDatabase(std::string const& query, std::string & result) const {
-		std::string const EOFBARRIER("E=O=F");
+		// A string which should be hard to accidentally include in the command content.
+		std::string const EOFBARRIER(std::string("E=O=F") + std::to_string(time(nullptr)));
+
+		if(query.find(EOFBARRIER) != std::string::npos)
+			return false;
 
 		std::stringstream css;
 		FILE *p = NULL;
-
-		// We can't send this string, lest we risk leaking out of the heredoc.
-		if(query.find(EOFBARRIER) != std::string::npos)
-			return false;
 
 		css << "cat << " << EOFBARRIER << " | nc localhost " << PORT_OFDX_AAA_SESSION_MGR << "\n"
 			<< query << "\n\n"
