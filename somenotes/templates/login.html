@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html><head>
+	<?ofdx template layout/base_head_begin.html>
 	<title>OFDX - Login</title>
+	<?ofdx template layout/base_head_end.html>
 </head><body>
-	<script src="/ofdx/js/ofdx_async.js"></script>
-	<script src="/ofdx/aaa/ofdx_auth.js"></script>
+	<h1><img class=img_pixelated src=/floppy-1.png> OFDX Login</h1>
 
 	<form id=ofdx_login method=POST action="/aaa/login/">
 		<label for=ofdx_user>Username: </label><input id=ofdx_user name=ofdx_user><br>
@@ -11,4 +12,8 @@
 		<input type=submit value="Login"><br>
 	</form>
 
+	<script src="/ofdx/js/ofdx_async.js"></script>
+	<script src="/ofdx/aaa/ofdx_auth.js"></script>
+
+	<?ofdx template layout/base_body_end.html>
 </body></html>
