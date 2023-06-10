@@ -1,0 +1,16 @@
+Content-Type: text/html; charset=utf-8
+
+<!DOCTYPE html>
+<html><head>
+	<title>OFDX - Login</title>
+</head><body>
+	<script src="/ofdx/js/ofdx_async.js"></script>
+	<script src="/ofdx/aaa/ofdx_auth.js"></script>
+
+	<form id=ofdx_login method=POST action="/aaa/login/">
+		<label for=ofdx_user>Username: </label><input id=ofdx_user name=ofdx_user><br>
+		<label for=ofdx_pass>Password: </label><input id=ofdx_pass name=ofdx_pass type=password><br>
+		<input type=submit value="Login"><br>
+	</form>
+
+</body></html>
