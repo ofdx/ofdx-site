@@ -133,34 +133,38 @@ protected:
 	// Callback for template processing. If a document contains "<?ofdx example tpl here>" then text will contain " example tpl here".
 	virtual void fillTemplate(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn, std::string const& text){}
 
+	void parseTemplateLine(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn, std::string const& line){
+		std::string const keystr("<?ofdx");
+
+		// Look for template and if found, call the replacement function.
+		auto a = line.find(keystr);
+
+		if(a != std::string::npos){
+			auto const b = line.find('>', a);
+
+			if(b != std::string::npos){
+				conn->out() << line.substr(0, a);
+
+				a += keystr.length();
+
+				std::string const text(line.substr(a, (b - a)));
+
+				fillTemplate(conn, text);
+				parseTemplateLine(conn, line.substr(b + 1));
+
+				return;
+			}
+		}
+
+		conn->out() << line << std::endl;
+	}
+
 	void serveTemplatedDocument(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn, std::ifstream & infile){
 		if(infile){
-			std::string const keystr("<?ofdx");
 			std::string line;
 
-			while(std::getline(infile, line)){
-				// Look for template and if found, call the replacement function.
-				auto a = line.find(keystr);
-
-				if(a != std::string::npos){
-					auto const b = line.find('>', a);
-
-					if(b != std::string::npos){
-						conn->out() << line.substr(0, a);
-
-						a += keystr.length();
-
-						std::string const text(line.substr(a, (b - a)));
-
-						fillTemplate(conn, text);
-						conn->out() << line.substr(b + 1) << std::endl;
-
-						continue;
-					}
-				}
-
-				conn->out() << line << std::endl;
-			}
+			while(std::getline(infile, line))
+				parseTemplateLine(conn, line);
 		}
 	}
 
