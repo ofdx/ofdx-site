@@ -16,10 +16,12 @@
 
 class OfdxSomeNotes : public OfdxFcgiService {
 	void debugResponse(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn){
-		std::ifstream infile(m_cfg.m_templatePath + "debug.html");
+		std::ifstream infile(m_cfg.m_templatePath + "debug/infopage.html");
 
 		if(infile)
 			serveTemplatedDocument(conn, infile);
+		else
+			serve404(conn);
 	}
 
 	void loginResponse(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn){
@@ -43,50 +45,54 @@ class OfdxSomeNotes : public OfdxFcgiService {
 		if(tss >> area){
 			if(area == "auth"){
 				// Related to authentication in some way.
-				if(tss >> area){
-					// Replace with the authenticated user's name
-					if(area == "user")
-						conn->out() << m_authUser;
-				}
+				if(!(tss >> area))
+					return;
+
+				// Replace with the authenticated user's name
+				if(area == "user")
+					conn->out() << m_authUser;
+
 			} else if(area == "debug"){
 				// Debug stuff, probably going to be removed in the future.
-				if(tss >> area){
-					if(area == "table"){
-						// Display a debug informational table.
-						if(tss >> area){
-							if(area == "parameters"){
-								// Table of all parameters sent via FCGI
-								conn->out() << "<table><tr><th>Name</th><th>Value</th></tr>";
-								for(auto i = 0; i < conn->parameter_count(); ++ i){
-									conn->out() << "<tr><td>" << conn->parameter_name(i) << "</td><td>" << conn->parameter(i) << "</td></tr>";
-								}
-								conn->out() << "</table>";
-							} else if(area == "files"){
-								// Dump out all of the files in the working directory.
-								conn->out() << "<table><tr><th>Filename</th><th>Size</th><th>Path</th></tr>";
+				if(!(tss >> area))
+					return;
 
-								for(auto const& entry : std::filesystem::recursive_directory_iterator(m_cfg.m_dataPath)){
-									conn->out()
-										<< "<tr><td>" << entry.path().filename()
-										<< "</td><td>" << (entry.is_directory() ? std::string("<i>dir</i>") : std::to_string(entry.file_size()))
-										<< "</td><td>" << entry.path()
-										<< "</td></tr>";
-								}
+				if(area == "table"){
+					if(!(tss >> area))
+						return;
 
-								conn->out() << "</table>";
-							}
+					// Display a debug informational table.
+					if(area == "parameters"){
+						// Table of all parameters sent via FCGI
+						conn->out() << "<table><tr><th>Name</th><th>Value</th></tr>";
+						for(auto i = 0; i < conn->parameter_count(); ++ i){
+							conn->out() << "<tr><td>" << conn->parameter_name(i) << "</td><td>" << conn->parameter(i) << "</td></tr>";
 						}
-					} else if(area == "isauthd"){
-						// Serve the next templated file if the user is authenticated.
-						if(!m_authUser.empty()){
-							std::string fname;
+						conn->out() << "</table>";
+					} else if(area == "files"){
+						// Dump out all of the files in the working directory.
+						conn->out() << "<table><tr><th>Filename</th><th>Size</th><th>Path</th></tr>";
 
-							if(tss >> fname){
-								std::ifstream infile(m_cfg.m_templatePath + fname);
+						for(auto const& entry : std::filesystem::recursive_directory_iterator(m_cfg.m_dataPath)){
+							conn->out()
+								<< "<tr><td>" << entry.path().filename()
+								<< "</td><td>" << (entry.is_directory() ? std::string("<i>dir</i>") : std::to_string(entry.file_size()))
+								<< "</td><td>" << entry.path()
+								<< "</td></tr>";
+						}
 
-								if(infile)
-									serveTemplatedDocument(conn, infile);
-							}
+						conn->out() << "</table>";
+					}
+				} else if(area == "isauthd"){
+					// Serve the next templated file if the user is authenticated.
+					if(!m_authUser.empty()){
+						std::string fname;
+
+						if(tss >> fname){
+							std::ifstream infile(m_cfg.m_templatePath + fname);
+
+							if(infile)
+								serveTemplatedDocument(conn, infile);
 						}
 					}
 				}
