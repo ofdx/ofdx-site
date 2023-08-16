@@ -18,7 +18,7 @@
 #define OFDX_FILE_SESS "sess"
 
 std::string const PATH_OFDX_AAA("/aaa/");
-std::string const PATH_OFDX_SOMENOTES("/notes/");
+std::string const PATH_OFDX_SOMENOTES("/notes/api/");
 
 std::string const OFDX_AUTH("ofdx_auth");
 std::string const OFDX_USER("ofdx_user");
@@ -27,6 +27,7 @@ std::string const OFDX_REDIR("ofdx_redir");
 
 std::string const URL_LOGIN(PATH_OFDX_AAA + "login/");
 std::string const URL_LOGOUT(PATH_OFDX_AAA + "logout/");
+std::string const URL_AUTH(PATH_OFDX_AAA + "auth/");
 
 std::string const URL_NOTES_DEBUG(PATH_OFDX_SOMENOTES + "debug/");
 

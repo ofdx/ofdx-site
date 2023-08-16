@@ -75,6 +75,22 @@ public:
 			<< "\r\n";
 	}
 
+	void authResponse(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn){
+		if(m_authUser.empty()){
+			// Not logged in, so return authorized.
+			sendUnauthorized(conn);
+		} else {
+			// Return user name and potentially other future data.
+			conn->out()
+				<< "Status: 200 OK\r\n"
+				<< "Content-Type: application/json; charset=utf-8\r\n"
+				<< "\r\n"
+				<< "{ \"user\": { \"name\": \"" << m_authUser << "\" } }\n";
+
+			// TODO Update expiration in the database and Set-Cookie?
+		}
+	}
+
 	void loginResponse(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn){
 		try {
 			if(conn->parameter("REQUEST_METHOD") == std::string("POST")){
@@ -179,7 +195,10 @@ public:
 		std::string const SCRIPT_NAME(conn->parameter("SCRIPT_NAME"));
 		parseCookies(conn);
 
-		if(SCRIPT_NAME == URL_LOGIN){
+		if(SCRIPT_NAME == URL_AUTH){
+			// Get authorization info for the active user session from cookies.
+			authResponse(conn);
+		} else if(SCRIPT_NAME == URL_LOGIN){
 			loginResponse(conn);
 		} else if(SCRIPT_NAME == URL_LOGOUT){
 			rmSid();

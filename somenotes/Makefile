@@ -8,7 +8,7 @@ clean:
 
 run: all stop
 	sleep 1
-	( ./${SOMENOTES} "templatepath /home/mike/src/ofdx/somenotes/templates/" ) &
+	( ./${SOMENOTES} "templatepath /home/mike/src/ofdx/somenotes/web/" ) &
 
 stop:
 	( killall -q ${SOMENOTES} ) &

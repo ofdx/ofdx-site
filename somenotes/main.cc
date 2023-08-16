@@ -127,11 +127,10 @@ public:
 		parseCookies(conn);
 
 		if(SCRIPT_NAME == PATH_OFDX_SOMENOTES){
-			std::ifstream infile(m_cfg.m_templatePath + "home.html");
+			std::ifstream infile(m_cfg.m_templatePath + "index.html");
 
-			if(!serveTemplatedDocument(conn, (m_cfg.m_templatePath + "home.html"), true))
+			if(!serveTemplatedDocument(conn, (m_cfg.m_templatePath + "index.html"), true))
 				serve404(conn);
-
 		} else if(SCRIPT_NAME == URL_NOTES_DEBUG){
 			if(m_authUser.empty()){
 				// Show login page...
