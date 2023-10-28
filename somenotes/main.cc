@@ -20,17 +20,6 @@ class OfdxSomeNotes : public OfdxFcgiService {
 			serve404(conn);
 	}
 
-	void loginResponse(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn){
-		if(m_authUser.empty() && serveTemplatedDocument(conn, (m_cfg.m_templatePath + "login.html"), true))
-			return;
-
-		conn->out()
-			<< "Status: 500 Error\r\n"
-			<< "Content-Type: text/plain; charset=utf-8\r\n"
-			<< "\r\n"
-			<< "Something unexpected happened.";
-	}
-
 	void fillTemplate(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn, std::string const& text) override {
 		std::stringstream tss(text);
 		std::string word;
@@ -96,9 +85,11 @@ class OfdxSomeNotes : public OfdxFcgiService {
 	}
 
 	void serve404(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn){
+		conn->out() << "Status: 404 Not Found\r\n";
+
 		if(!serveTemplatedDocument(conn, (m_cfg.m_templatePath + "404.html")))
 			// Misconfiguration or missing file...
-			conn->out() << "Status: 404\r\n\r\n";
+			conn->out() << "\r\n\r\n404\r\n";
 	}
 
 public:
@@ -118,8 +109,18 @@ public:
 	OfdxSomeNotes() :
 		m_cfg(PORT_OFDX_SOMENOTES, PATH_OFDX_SOMENOTES)
 	{
-		// FIXME debug
-		m_cfg.m_dataPath = "./";
+	}
+
+	bool processCliArguments(int argc, char **argv){
+		if(m_cfg.processCliArguments(argc, argv)){
+			// Database path must be set...
+			if(m_cfg.m_dataPath.empty()){
+				std::cerr << "Error: datapath must be set";
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	void handleConnection(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn) override {
@@ -133,8 +134,8 @@ public:
 				serve404(conn);
 		} else if(SCRIPT_NAME == URL_NOTES_DEBUG){
 			if(m_authUser.empty()){
-				// Show login page...
-				loginResponse(conn);
+				// Hide the debug page with the generic 404.
+				serve404(conn);
 			} else {
 				// Debug informational page.
 				debugResponse(conn);
@@ -150,7 +151,7 @@ int main(int argc, char **argv){
 	OfdxSomeNotes app;
 
 	// Get config overrides from the CLI arguments.
-	if(!app.m_cfg.processCliArguments(argc, argv))
+	if(!app.processCliArguments(argc, argv))
 		return 1;
 
 	app.listen(app.m_cfg);

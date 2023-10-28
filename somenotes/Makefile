@@ -8,7 +8,9 @@ clean:
 
 run: all stop
 	sleep 1
-	( ./${SOMENOTES} "templatepath /home/mike/src/ofdx/somenotes/web/" ) &
+	( ./${SOMENOTES} \
+		"templatepath /home/mike/src/ofdx/somenotes/web/" \
+		"datapath /home/mike/test/db/somenotes/" ) &
 
 stop:
 	( killall -q ${SOMENOTES} ) &
