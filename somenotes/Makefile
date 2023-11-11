@@ -1,5 +1,5 @@
 SOMENOTES=ofdx_somenotes
-GPP=g++ -std=c++17 -I../ -I../dmitigr_fcgi/src/
+GPP=g++ -std=c++17 -I../ -I../dmitigr_fcgi/src/ -I../renényffenegger/
 
 all: ${SOMENOTES}
 
@@ -15,5 +15,5 @@ run: all stop
 stop:
 	( killall -q ${SOMENOTES} ) &
 
-${SOMENOTES}: main.cc ../ofdx/*
-	${GPP} -o ${SOMENOTES} main.cc
+${SOMENOTES}: main.cc ../ofdx/* ../renényffenegger/rene.o
+	${GPP} -o ${SOMENOTES} main.cc ../renényffenegger/rene.o

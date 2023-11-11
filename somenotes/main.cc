@@ -9,6 +9,7 @@
    SomeNotes!
 */
 
+#include "base64.h"
 #include "ofdx/ofdx_fcgi.h"
 
 #include <filesystem>
@@ -35,12 +36,12 @@ public:
 			void json(std::ostream &ss, bool withBody){
 				ss << "{"
 					<< "\"id\":\"" << m_id << "\","
-					<< "\"title\":\"" << m_title /* FIXME - needs quote escaped */ << "\","
+					<< "\"title\":\"" << base64_encode(m_title) << "\","
 					<< "\"created\":" << m_timeCreated << ","
 					<< "\"modified\":" << m_timeModified;
 
 				if(withBody)
-					ss << ",\"body\":\"" << m_body /* FIXME - needs quote escaped */ << "\"";
+					ss << ",\"body\":\"" << base64_encode(m_body) << "\"";
 
 				ss << "}";
 			}
