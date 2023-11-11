@@ -14,9 +14,9 @@
 #include <filesystem>
 
 class OfdxSomeNotes : public OfdxFcgiService {
+public:
 	class NoteDatabase {
-		std::string m_dbpath;
-
+	public:
 		struct NoteFile {
 			// Every NoteFile is represented by a file on disk, named m_id.
 			// The file should have headers for each of the members of this
@@ -31,8 +31,23 @@ class OfdxSomeNotes : public OfdxFcgiService {
 			NoteFile() :
 				m_pendingSave(false)
 			{}
+
+			void json(std::ostream &ss, bool withBody){
+				ss << "{"
+					<< "\"id\":\"" << m_id << "\","
+					<< "\"title\":\"" << m_title /* FIXME - needs quote escaped */ << "\","
+					<< "\"created\":" << m_timeCreated << ","
+					<< "\"modified\":" << m_timeModified;
+
+				if(withBody)
+					ss << ",\"body\":\"" << m_body /* FIXME - needs quote escaped */ << "\"";
+
+				ss << "}";
+			}
 		};
 
+	private:
+		std::string m_dbpath;
 		std::unordered_map<std::string, std::shared_ptr<NoteFile>> m_notes;
 
 		void get_the_rest(std::stringstream &src, std::string &dest) const {
@@ -118,12 +133,99 @@ class OfdxSomeNotes : public OfdxFcgiService {
 			}
 		}
 
+		void jsonMetadataForUser(std::ostream &ss, std::string const& user){
+			bool first = true;
+
+			ss << "{\"notes\":[";
+
+			for(auto &el : m_notes){
+				if(el.second->m_author != user)
+					continue;
+
+				if(first)
+					first = false;
+				else
+					ss << ',';
+
+				el.second->json(ss, false);
+			}
+
+			ss << "]}";
+		}
+
+		std::shared_ptr<NoteFile> getNote(std::string const& user, std::string const& fname){
+			if(m_notes.count(fname) == 1){
+				std::shared_ptr<NoteFile> note = m_notes[fname];
+
+				if(note && (note->m_author == user))
+					return note;
+			}
+
+			return nullptr;
+		}
+
 		NoteDatabase(std::string const& dbpath) :
 			m_dbpath(dbpath)
 		{
 			load();
 		}
-	} *m_noteDb;
+	};
+
+private:
+	NoteDatabase *m_noteDb;
+
+	void apiFileRoot(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn){
+		std::string const REQUEST_METHOD(conn->parameter("REQUEST_METHOD"));
+		/*
+			f/
+			  GET
+				- Get metadata for all note files owned by the authorized user.
+			  POST
+				- Create a new note file. Returns the path to the new note file in the API,
+				  or the file name, or some other identifier.
+			  OPTIONS
+		*/
+		if(REQUEST_METHOD == "OPTIONS"){
+			conn->out() << "Allow: OPTIONS, GET, POST\r\n\r\n";
+		} else if(REQUEST_METHOD == "GET"){
+			// FIXME debug - check m_authUser and return error
+			conn->out()
+				<< "Status: 200 OK\r\n"
+				<< "Content-Type: application/json; charset=utf-8\r\n"
+				<< "\r\n";
+
+			// Get all files for this user
+			m_noteDb->jsonMetadataForUser(conn->out(), m_authUser);
+		} else if(REQUEST_METHOD == "POST"){
+			// Create a file for this user
+			// TODO
+		}
+	}
+	void apiFile(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn, std::string const& fname){
+		std::string const REQUEST_METHOD(conn->parameter("REQUEST_METHOD"));
+
+		if(REQUEST_METHOD == "OPTIONS"){
+			conn->out() << "Allow: OPTIONS, GET, PUT, DELETE\r\n\r\n";
+		} else if(REQUEST_METHOD == "GET"){
+			std::shared_ptr<NoteDatabase::NoteFile> note = m_noteDb->getNote(m_authUser, fname);
+
+			if(note){
+				// Note exists and this user can access it.
+				conn->out()
+					<< "Status: 200 OK\r\n"
+					<< "Content-Type: application/json; charset=utf-8\r\n"
+					<< "\r\n";
+
+				note->json(conn->out(), true);
+			} else {
+				serve404(conn);
+			}
+		} else if(REQUEST_METHOD == "PUT"){
+			// TODO - update this note
+		} else if(REQUEST_METHOD == "DELETE"){
+			// TODO - delete the specified note
+		}
+	}
 
 	void debugResponse(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn){
 		if(!serveTemplatedDocument(conn, (m_cfg.m_templatePath + "debug/infopage.html"), true))
@@ -234,6 +336,18 @@ public:
 
 			if(!serveTemplatedDocument(conn, (m_cfg.m_templatePath + "index.html"), true))
 				serve404(conn);
+		} else if(SCRIPT_NAME.find(URL_NOTES_FILE) == 0){
+			// Note file API
+			if(SCRIPT_NAME == URL_NOTES_FILE){
+				// List all files or POST to create a new file.
+				apiFileRoot(conn);
+			} else {
+				// The name of the file should be the rest of the SCRIPT_NAME after the API part.
+				std::string const fname(SCRIPT_NAME.substr(URL_NOTES_FILE.size()));
+
+				// Show or modify one specific file.
+				apiFile(conn, fname);
+			}
 		} else if(SCRIPT_NAME == URL_NOTES_DEBUG){
 			if(m_authUser.empty()){
 				// Hide the debug page with the generic 404.

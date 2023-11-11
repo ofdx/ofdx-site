@@ -1,0 +1,26 @@
+Starting from the root (/notes/api/):
+
+debug/
+  GET
+	- Show a debug page. Requires authorization. Probably to be removed before
+	  final release.
+
+f/
+  GET
+    - Get metadata for all note files owned by the authorized user.
+  POST
+	- Create a new note file. Returns the path to the new note file in the API,
+	  or the file name, or some other identifier.
+  OPTIONS
+
+f/{fname}
+  GET
+	- Get the contents and metadata for the specified file on disk, if it
+	  exists (may 404). May also 400 or 404 if the user is not authorized to
+	  view the extant document.
+  PUT
+    - Update existing note file if authorized.
+  DELETE
+    - Delete file if it exists.
+  OPTIONS
+

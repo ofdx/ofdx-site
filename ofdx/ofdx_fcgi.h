@@ -30,6 +30,7 @@ std::string const URL_LOGOUT(PATH_OFDX_AAA + "logout/");
 std::string const URL_AUTH(PATH_OFDX_AAA + "auth/");
 
 std::string const URL_NOTES_DEBUG(PATH_OFDX_SOMENOTES + "debug/");
+std::string const URL_NOTES_FILE(PATH_OFDX_SOMENOTES + "f/");
 
 struct OfdxBaseConfig {
 	std::string m_addr;
