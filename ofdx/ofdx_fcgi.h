@@ -204,35 +204,43 @@ public:
 	}
 
 	bool querySessionDatabase(std::string const& query, std::string & result) const {
-		// A string which should be hard to accidentally include in the command content.
-		std::string const EOFBARRIER(std::string("E=O=F") + std::to_string(time(nullptr)));
-
-		if(query.find(EOFBARRIER) != std::string::npos)
+		int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+		if(sockfd == -1)
 			return false;
 
-		std::stringstream css;
-		FILE *p = NULL;
+		struct sockaddr_in
+			clientaddr = (struct sockaddr_in){},
+			serveraddr = (struct sockaddr_in){
+				.sin_family = AF_INET,
+				.sin_port = htons(PORT_OFDX_AAA_SESSION_MGR),
+				.sin_addr = {
+					.s_addr = inet_addr("127.0.0.1")
+				}
+			};
 
-		css << "cat << " << EOFBARRIER << " | nc localhost " << PORT_OFDX_AAA_SESSION_MGR << "\n"
-			<< query << "\n\n"
-			<< EOFBARRIER;
+		if(connect(sockfd, (struct sockaddr*) &serveraddr, sizeof(serveraddr)))
+			return false;
 
-		if(p = popen(css.str().c_str(), "r")){
+		ssize_t ct = write(sockfd, query.c_str(), query.size());
+		if(ct > 0){
 			size_t n = 1024;
-			char *raw = (char*) calloc(n, sizeof(char));
+			char *b = (char*) calloc(n, sizeof(char));
 
-			getline(&raw, &n, p);
-			if(char *s = strpbrk(raw, "\r\n"))
-				*s = 0;
+			memset(b, 0, n);
+			ct = read(sockfd, b, n);
 
-			result.assign(raw);
+			if(ct > 0){
+				if(char *s = strpbrk(b, "\r\n"))
+					*s = 0;
 
-			free(raw);
-			pclose(p);
+				result = b;
+			}
 
-			return !result.empty();
+			free(b);
 		}
 
-		return false;
+		close(sockfd);
+
+		return !result.empty();
 	}
 };

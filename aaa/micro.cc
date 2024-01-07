@@ -8,18 +8,15 @@
 bool OfdxManagerMicro::MicroConnection::receiveCmd(){
 	prepareToRead();
 
-	do {
-		int rc = tryRead();
+	ssize_t rc = -1;
+	while(rc < 0){
+		rc = tryRead();
 
-		if(rc < 0)
-			// Retry
-			continue;
-
+		// 0 bytes read is generally a timeout.
 		if(rc == 0)
-			// 0 bytes read is generally a timeout.
 			return false;
 
-	} while(m_sockstream.str().find("\n\n") == std::string::npos);
+	}
 
 	std::string line;
 
