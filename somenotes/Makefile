@@ -9,7 +9,7 @@ clean:
 run: all stop
 	sleep 1
 	( ./${SOMENOTES} \
-		"templatepath /home/mike/src/ofdx/somenotes/web/" \
+		"templatepath /home/mike/src/ofdx/somenotes/notes/" \
 		"datapath /home/mike/test/db/somenotes/" ) &
 
 stop:

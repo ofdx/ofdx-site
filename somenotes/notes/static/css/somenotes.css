@@ -1,0 +1,91 @@
+/*
+  somenotes.css
+  mperron (2024)
+
+  Style for SomeNotes Text Editor
+*/
+
+body {
+  background-color: #111;
+  padding: 0;
+  margin: 0;
+}
+
+.img_pixelated {
+  image-rendering: pixelated;
+}
+
+#note_texted {
+  width: 100%;
+  width: 100vw;
+  width: 100svw;
+}
+
+#note_texted_ctrlbar {
+  height: 1.8em;
+  border: solid 1px black;
+
+  color: #ccc;
+  background-color: #444;
+}
+#note_texted_ctrlbar .pick {
+  display: inline-block;
+  margin: 0 0.35em;
+  padding: 0.4em;
+  height: 1em;
+
+  font-family: sans-serif;
+  text-shadow: 0.1em 0.1em 0.1em rgba(0, 0, 0, 0.3);
+}
+#note_texted_ctrlbar .pick.active,
+#note_texted_ctrlbar .pick:hover {
+  background-color: rgba(0, 0, 0, 0.3);
+  user-select: none;
+  cursor: pointer;
+}
+#note_texted_ctrlbar .pick.active {
+  border: solid 1px rgba(255, 255, 255, 0.5);
+  margin: -1px calc(0.35em - 1px);
+}
+#note_texted_ctrlbar .pick img {
+  margin: 0 0.35em -0.1em 0;
+  height: 1em;
+}
+#note_texted_ctrlbar .pick img.hidden {
+  display: none;
+}
+
+#note_texted_field {
+  width: calc(100% - 2em);
+  min-height: calc(100svh - 400px - 5.6em);
+  resize: none;
+
+  margin: 0;
+  padding: 1em 1em 400px 1em;
+
+  border-radius: 0;
+  border: none;
+  outline: none;
+
+  font-size: 150%;
+  font-family: monospace;
+
+  color: #ccc;
+  background-color: #222;
+}
+
+#note_texted_doc_title {
+  width: calc(100% - 1em);
+
+  margin: 0;
+  padding: 0.2em 0.5em;
+
+  border-radius: 0;
+  border: none;
+  outline: none;
+
+  font-size: 200%;
+
+  color: #ddd;
+  background-color: #111;
+}

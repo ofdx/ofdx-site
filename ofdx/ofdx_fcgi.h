@@ -18,7 +18,7 @@
 #define OFDX_FILE_SESS "sess"
 
 std::string const PATH_OFDX_AAA("/aaa/");
-std::string const PATH_OFDX_SOMENOTES("/notes/api/");
+std::string const PATH_OFDX_SOMENOTES("/notes/");
 
 std::string const OFDX_AUTH("ofdx_auth");
 std::string const OFDX_USER("ofdx_user");

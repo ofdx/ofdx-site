@@ -1,6 +1,6 @@
 /*
    SomeNotes
-   mperron (2023)
+   mperron (2024)
 
    A FastCGI web application for storing organized lists of links,
    random notes, small files, etc.
@@ -13,6 +13,8 @@
 #include "ofdx/ofdx_fcgi.h"
 
 #include <filesystem>
+
+#define RESOURCE_VERSION 1
 
 class OfdxSomeNotes : public OfdxFcgiService {
 public:
@@ -253,6 +255,9 @@ private:
 				if(word == "user")
 					conn->out() << m_authUser;
 
+			} else if(word == "version"){
+				// Used for cache busting.
+				conn->out() << RESOURCE_VERSION;
 			} else if(word == "debug"){
 				// Debug stuff, probably going to be removed in the future.
 				if(!(tss >> word))
