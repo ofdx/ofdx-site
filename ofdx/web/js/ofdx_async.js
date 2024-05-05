@@ -1,23 +1,34 @@
 /*
 	XMLHttpRequest wrapper
-	mperron (2023)
+	mperron (2024)
 */
 
 var OfdxAsync = {
-	method: undefined,
-	target: undefined,
-	
+	/*
+		Send an async request. Argument should be an object:
+		{
+			method:    request method (default GET)
+			post:      optional body for PUT/POST
+			target:    target URL
+			auth:      basic auth credentials as object: { user, pass }
+			type:      XMLHttpRequest.responseType (e.g. 'json')
+
+			// Callback functions
+			onload:     for XMLHttpRequest.onload
+			success:    when readyState = 4 and http.status = 200
+			unhandled:  when readyState = 4 and status != 200
+			completion: when readyState = 4 (after success/unhandled)
+			onerror:    for XMLHttpRequest.onerror
+		}
+	*/
 	send: function(meta){
 		if(!meta)
 			return false;
 
-		var http = new XMLHttpRequest();
-		this.method = (meta.method) ? meta.method : "GET";
-		this.target = meta.target;
+		let http = new XMLHttpRequest();
 
-		var post = (this.method === "POST") ? meta.post : undefined;
-
-		http.open(this.method, this.target, true);
+		http.responseType = meta.type || undefined;
+		http.open((meta.method || "GET"), meta.target, true);
 		http.onload = function(xhrEvent){
 			if(meta.onload)
 				return meta.onload(http, xhrEvent);
@@ -51,6 +62,6 @@ var OfdxAsync = {
 			);
 		}
 
-		http.send(post);
+		http.send(meta.post);
 	},
 };

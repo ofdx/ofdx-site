@@ -14,7 +14,7 @@
 
 #include <filesystem>
 
-#define RESOURCE_VERSION 1
+#define RESOURCE_VERSION 3
 
 class OfdxSomeNotes : public OfdxFcgiService {
 public:
