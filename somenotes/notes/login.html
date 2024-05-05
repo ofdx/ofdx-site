@@ -1,0 +1,125 @@
+<style>
+	#login_ctn {
+		background-color: white;
+		color: black;
+		width: 250px;
+		margin: 0 auto;
+		padding: 1em 2em 3em 2em;
+	}
+	label {
+		font-size: 80%;
+	}
+	input {
+		width: 100%;
+		margin: 0 0 1em 0;
+		padding: 0.2em;
+		border: solid 1px black;
+		border-radius: 0.2em;
+	}
+	input[type=submit] {
+		width: unset;
+		padding: 0.5em 1.5em;
+		margin: 1em auto;
+		cursor: pointer;
+	}
+	input:disabled {
+		background-color: dimgrey;
+		color: linen;
+	}
+
+	#error {
+		display: none;
+		color: #f53;
+		font-weight: bold;
+		font-size: 80%;
+	}
+</style>
+
+<div id=login_ctn>
+	<h1>OFDX</h1>
+	<p id=error></p>
+	<form id=login>
+		<label for=user>Username:</label><br>
+		<input id=user name=user><br>
+
+		<label for=pass>Password:</label><br>
+		<input id=pass name=pass type=password><br>
+
+		<center>
+			<input type=submit value=Login>
+		</center>
+	</form>
+</div>
+
+<script>
+	var login = document.getElementById('login');
+	var ferror = document.getElementById('error');
+
+	var fuser = document.getElementById('user');
+	var fpass = document.getElementById('pass');
+
+	login.addEventListener('submit', function(e){
+		e.preventDefault();
+
+		let user = fuser.value;
+		let pass = fpass.value;
+
+		let enable = function(en){
+			for(let i = 0; i < login.length; ++ i)
+				login[i].disabled = !en;
+		}
+		let error_msg = function(msg){
+			if(msg){
+				ferror.style.display = 'block';
+				ferror.innerHTML = msg;
+			} else {
+				// Clear existing error
+				ferror.style.display = 'none';
+				ferror.innerHTML = '';
+			}
+		}
+
+		// Disable all fields and clear the error message.
+		enable(false);
+		error_msg();
+
+		// Validate input before sending
+		// TODO - check if user/pass empty
+
+		// Send login request.
+		OfdxAsync.send({
+			target: '/aaa/login/',
+			method: 'POST',
+			auth: {
+				user: user,
+				pass: pass
+			},
+			completion: function(el){
+				// If successful, status should be 204.
+				if(el.status === 204){
+					// Reload the page.
+					location.reload();
+				} else {
+					setTimeout(function(){
+						// Else enable fields to try again
+						enable(true);
+
+						// Display error message if available.
+						if(el.responseText)
+							error_msg(el.responseText);
+					}, 500);
+				}
+			},
+			onerror: function(el){
+				// Enable fields to try again
+				enable(true);
+
+				// Display error message if available.
+				if(el.responseText)
+					error_msg(el.responseText);
+				else
+					error_msg("An unexpected error occurred. Please try again.");
+			}
+		});
+	});
+</script>

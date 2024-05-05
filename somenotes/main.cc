@@ -14,7 +14,7 @@
 
 #include <filesystem>
 
-#define RESOURCE_VERSION 3
+#define RESOURCE_VERSION 4
 
 class OfdxSomeNotes : public OfdxFcgiService {
 public:
@@ -246,6 +246,25 @@ private:
 					return;
 
 				serveTemplatedDocument(conn, (m_cfg.m_templatePath + word));
+
+			} else if(word == "isauthd"){
+				// Serve the next templated file if the user is authenticated.
+				if(!m_authUser.empty()){
+					std::string fname;
+
+					if(tss >> fname)
+						serveTemplatedDocument(conn, (m_cfg.m_templatePath + fname));
+				}
+
+			} else if(word == "isnotauthd"){
+				// Serve the next templated file if the user is NOT authenticated.
+				if(m_authUser.empty()){
+					std::string fname;
+
+					if(tss >> fname)
+						serveTemplatedDocument(conn, (m_cfg.m_templatePath + fname));
+				}
+
 			} else if(word == "auth"){
 				// Related to authentication in some way.
 				if(!(tss >> word))
@@ -258,6 +277,7 @@ private:
 			} else if(word == "version"){
 				// Used for cache busting.
 				conn->out() << RESOURCE_VERSION;
+
 			} else if(word == "debug"){
 				// Debug stuff, probably going to be removed in the future.
 				if(!(tss >> word))
@@ -279,15 +299,8 @@ private:
 						// Dump the file database.
 						m_noteDb->debug(conn->out());
 					}
-				} else if(word == "isauthd"){
-					// Serve the next templated file if the user is authenticated.
-					if(!m_authUser.empty()){
-						std::string fname;
-
-						if(tss >> fname)
-							serveTemplatedDocument(conn, (m_cfg.m_templatePath + fname));
-					}
 				}
+
 			}
 		}
 	}

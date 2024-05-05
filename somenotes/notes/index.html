@@ -15,38 +15,10 @@
 	<link rel=stylesheet href="static/css/somenotes.css?v=<?ofdx version>">
   </head>
   <body>
-    <script>
-      window.ofdx = {
-        authUser: {
-          name: "<?ofdx auth user>"
-        }
-      };
-    </script>
 
-	<div id="note_texted">
-		<div id="note_texted_ctrlbar">
-			<!-- Open a menu with other applications and preferences. -->
-			<span class=pick><img class=img_pixelated src=/texted.png> OFDX</span>
+	<?ofdx isauthd notes.html>
+	<?ofdx isnotauthd login.html>
 
-			<!-- Open a dialog to create a new/empty note, or load from one saved on the server. -->
-			<span class=pick>Notes…</span>
-
-			<!-- Open a dialog with info about this application and the currently open file. -->
-			<span class=pick>About…</span>
-		</div>
-
-		<!-- Note title -->
-		<input
-			id="note_texted_doc_title"
-			placeholder="Untitled"
-			maxlength=128
-			autocomplete="off">
-
-		<!-- Main text area -->
-		<textarea id="note_texted_field" autoComplete="off"></textarea>
-	</div>
-
-	<script src="static/js/somenotes.js?v=<?ofdx version>"></script>
 	<script src="/ofdx/js/ofdx_async.js?v=<?ofdx version>"></script>
   </body>
 </html>
