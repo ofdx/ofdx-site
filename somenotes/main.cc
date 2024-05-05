@@ -293,11 +293,13 @@ private:
 	}
 
 	void serve404(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn){
-		conn->out() << "Status: 404 Not Found\r\n";
+		conn->out()
+			<< "Status: 404 Not Found\r\n"
+			<< "Content-Type: text/html; charset=utf-8\r\n\r\n";
 
 		if(!serveTemplatedDocument(conn, (m_cfg.m_templatePath + "404.html")))
 			// Misconfiguration or missing file...
-			conn->out() << "\r\n\r\n404\r\n";
+			conn->out() << "<html><head><title>404</title></head><body>404</body></html>\r\n";
 	}
 
 public:
