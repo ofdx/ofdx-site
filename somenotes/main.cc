@@ -17,6 +17,8 @@
 #define RESOURCE_VERSION 4
 
 class OfdxSomeNotes : public OfdxFcgiService {
+	time_t m_timeNow;
+
 public:
 	class NoteDatabase {
 	public:
@@ -24,15 +26,25 @@ public:
 			// Every NoteFile is represented by a file on disk, named m_id.
 			// The file should have headers for each of the members of this
 			// struct, plus the actual contents of the file (as m_body).
-			uint64_t m_timeCreated, m_timeModified;
+			time_t m_timeCreated, m_timeModified;
 			std::string m_id, m_author, m_title, m_body;
 
 			// When a file is modified, we can mark it as pendingSave, and
 			// eventually it will be written to disk.
 			bool m_pendingSave;
 
+			// To be populated from disk read at startup.
 			NoteFile() :
 				m_pendingSave(false)
+			{}
+
+			// Creating a new empty document.
+			NoteFile(time_t time_now, std::string const& id, std::string const& author) :
+				m_timeCreated(time_now),
+				m_timeModified(time_now),
+				m_id(id),
+				m_author(author),
+				m_pendingSave(true)
 			{}
 
 			void json(std::ostream &ss, bool withBody){
@@ -121,6 +133,28 @@ public:
 			}
 		}
 
+		std::shared_ptr<NoteFile> create(time_t time_now, std::string const& user){
+			// Generate random unique file name
+			// TODO
+
+			// Create a new empty file on disk.
+			// TODO
+
+			// Set timestamp to right now
+			// TODO
+
+			// Set owner to this user
+			// TODO
+
+			// FIXME - create a unique random ID.
+			std::string id = "FIXME";
+
+			std::shared_ptr<NoteFile> note = std::make_shared<NoteFile>(time_now, id, user);
+			m_notes[note->m_id] = note;
+
+			return note;
+		}
+
 		void save(){
 			// TODO - write out entire database to disk. Or write one file?
 			// The persistence should probably be granual.
@@ -190,8 +224,14 @@ private:
 		*/
 		if(REQUEST_METHOD == "OPTIONS"){
 			conn->out() << "Allow: OPTIONS, GET, POST\r\n\r\n";
+		} else if(m_authUser.empty()){
+			conn->out()
+				<< "Status: 401 Unauthorized\r\n"
+				<< "Content-Type: text/plain; charset=utf-8\r\n"
+				<< "\r\n"
+				<< "Unauthorized." << std::endl;
+
 		} else if(REQUEST_METHOD == "GET"){
-			// FIXME debug - check m_authUser and return error
 			conn->out()
 				<< "Status: 200 OK\r\n"
 				<< "Content-Type: application/json; charset=utf-8\r\n"
@@ -199,9 +239,27 @@ private:
 
 			// Get all files for this user
 			m_noteDb->jsonMetadataForUser(conn->out(), m_authUser);
+
 		} else if(REQUEST_METHOD == "POST"){
-			// Create a file for this user
-			// TODO
+			std::shared_ptr<NoteDatabase::NoteFile> note = m_noteDb->create(m_timeNow, m_authUser);
+
+			if(note){
+				conn->out()
+					<< "Status: 200 OK\r\n"
+					<< "Location: " << URL_NOTES_FILE << note->m_id << "\r\n"
+					<< "Content-Type: application/json; charset=utf-8\r\n"
+					<< "\r\n";
+
+				// Send back without body (body should be empty)
+				note->json(conn->out(), false);
+			} else {
+				// Failed to create a note.
+				conn->out()
+					<< "Status: 500 Internal Server Error\r\n"
+					<< "Content-Type: text/plain; charset=utf-8\r\n"
+					<< "\r\n"
+					<< "500\n" << std::endl;
+			}
 		}
 	}
 	void apiFile(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn, std::string const& fname){
@@ -349,6 +407,8 @@ public:
 	}
 
 	void handleConnection(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn) override {
+		time(&m_timeNow);
+
 		std::string const SCRIPT_NAME(conn->parameter("SCRIPT_NAME"));
 		parseCookies(conn);
 

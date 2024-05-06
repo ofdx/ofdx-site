@@ -1,28 +1,64 @@
-<script>
+<!-- <script>
   window.ofdx = {
 	authUser: {
 	  name: "<?ofdx auth user>"
 	}
   };
-</script>
+</script> -->
 
 <div id="note_texted">
 	<div id="note_texted_ctrlbar">
 		<!-- Open a menu with other applications and preferences. -->
-		<span class=pick><img class=img_pixelated src=/texted.png> OFDX</span>
+		<span class=nopick><img class=img_pixelated src=/texted.png> OFDX</span>
 
 		<!-- Open a dialog to create a new/empty note, or load from one saved on the server. -->
-		<span class=pick>Notes…</span>
+		<span id=ctrlbar_notes class=pick target-el=menu_notes>Notes…</span>
 
 		<!-- Open a dialog with info about this application and the currently open file. -->
-		<span class=pick>About…</span>
+		<span id=ctrlbar_about class=pick target-el=menu_about>About…</span>
 	</div>
 
-	<!-- Note title -->
-	<input id="note_texted_doc_title" placeholder="Untitled" maxlength=128 autocomplete="off">
+	<!-- Menus (driven by ctrlbar) -->
+	<div id=menu_notes class=note_texted_ctrlbar_menu>
+		<ul>
+			<li class=pick>New…</li>
+			<li class=pick target-card=card_load>Load…</li>
+			<li class=pick>Save</li>
+			<hr>
+			<li class=pick target-card=card_settings>Settings…</li>
+		</ul>
+	</div>
 
-	<!-- Main text area -->
-	<textarea id="note_texted_field" autocomplete="off"></textarea>
+	<div id=menu_about class=note_texted_ctrlbar_menu>
+		<p>
+		SomeNotes was written by Mike Perron in 2024, as a simple
+		textarea-as-a-service web app, which can store any random notes,
+		optionally encrypted on the client-side, for maximum privacy.
+		</p>
+	</div>
+	<!-- End Menus -->
+
+	<!-- Modal Cards -->
+	<div class="note_texted_card" id=card_load>
+	</div>
+
+	<div class="note_texted_card" id=card_settings>
+		<h2>Account Settings</h2>
+		<p><a href=/aaa/logout/>Log Out</a></p>
+
+		<hr>
+
+		<p><a onclick="OfdxSomeNotes.popAll()" class=btn>Back</a></p>
+	</div>
+
+	<div class="note_texted_card active" id=card_editor>
+		<!-- Note title -->
+		<input id="note_texted_doc_title" placeholder="Untitled" maxlength=128 autocomplete="off">
+
+		<!-- Main text area -->
+		<textarea id="note_texted_field" autocomplete="off"></textarea>
+	</div>
+	<!-- End Modal Cards -->
 </div>
 
 <script src="static/js/somenotes.js?v=<?ofdx version>"></script>
