@@ -26,7 +26,7 @@ window.addEventListener('load', function(){
 			OfdxAsync.send({
 				target: 'f/' + notename,
 				type: 'json',
-				completion: function(http){
+				ondone: function(http){
 					// FIXME debug
 					console.log(http);
 
@@ -70,26 +70,51 @@ window.addEventListener('load', function(){
 		var ctrlbar_picks = document.querySelectorAll("#note_texted_ctrlbar .pick"); 
 		for(let i = 0; i < ctrlbar_picks.length; ++ i){
 			let pick = ctrlbar_picks[i];
-			let target = pick.hasAttribute('target-el') ? document.getElementById(pick.getAttribute('target-el')) : undefined;
+
+			pick.menuState = function(state){
+				let target = pick.hasAttribute('target-el') ? document.getElementById(pick.getAttribute('target-el')) : undefined;
+
+				if(state === undefined){
+					// Default behavior is toggle.
+					if(target)
+						target.classList.toggle('active');
+
+					pick.classList.toggle('active');
+				} else if(state){
+					// Show
+					if(target)
+						target.classList.add('active');
+
+					pick.classList.add('active');
+				} else {
+					// Hide
+					if(target)
+						target.classList.remove('active');
+
+					pick.classList.remove('active');
+				}
+			}
 
 			pick.addEventListener('click', function(){
 				// Open this menu if it wasn't already open.
-				if(target)
-					target.classList.toggle('active');
-
-				pick.classList.toggle('active');
+				pick.menuState();
 
 				for(let ii = 0; ii < ctrlbar_picks.length; ++ ii){
 					let other = ctrlbar_picks[ii];
 
 					// Remove pick class and close its menu.
-					if(other !== pick){
-						if(other.hasAttribute('target-el'))
-							document.getElementById(other.getAttribute('target-el')).classList.remove('active');
-
-						other.classList.remove('active');
-					}
+					if(other !== pick)
+						other.menuState(false);
 				}
+			});
+		}
+
+		// Close the menu bar if we get a click in the main card area.
+		var note_card_area = document.getElementById('note_card_area');
+		if(note_card_area){
+			note_card_area.addEventListener('click', function(){
+				for(let i = 0; i < ctrlbar_picks.length; ++ i)
+					ctrlbar_picks[i].menuState(false);
 			});
 		}
 
@@ -100,7 +125,7 @@ window.addEventListener('load', function(){
 			OfdxAsync.send({
 				target: 'f/',
 				type: 'json',
-				completion: function(http){
+				ondone: function(http){
 					if(http.status === 200){
 						OfdxSomeNotes.notes = http.response.notes
 							// Decode base64 title.

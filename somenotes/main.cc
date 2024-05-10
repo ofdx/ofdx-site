@@ -14,7 +14,7 @@
 
 #include <filesystem>
 
-#define RESOURCE_VERSION 4
+#define RESOURCE_VERSION 5
 
 class OfdxSomeNotes : public OfdxFcgiService {
 	time_t m_timeNow;

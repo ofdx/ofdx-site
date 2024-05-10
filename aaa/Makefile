@@ -10,13 +10,12 @@ clean:
 	rm -f ${APP} ${SESSION_MGR}
 
 run: all stop
-	sleep 1
 	( ./${APP} "datapath /home/mike/test/db/aaa/" ) &
 	( ./${SESSION_MGR} "datapath /home/mike/test/db/aaa/" ) &
 
 stop:
-	( killall -q ${APP} ) &
-	( killall -q ${SESSION_MGR} ) &
+	killall -q ${APP} || true
+	killall -q ${SESSION_MGR} || true
 
 # Authentication FCGI Service
 ${APP}: main.cc ../ofdx/* ../renényffenegger/rene.o

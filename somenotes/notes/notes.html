@@ -38,27 +38,29 @@
 	</div>
 	<!-- End Menus -->
 
-	<!-- Modal Cards -->
-	<div class="note_texted_card" id=card_load>
+	<div id=note_card_area>
+		<!-- Load notes from the server -->
+		<div class="note_texted_card" id=card_load></div>
+
+		<!-- Account/application settings, logout, etc. -->
+		<div class="note_texted_card" id=card_settings>
+			<h2>Account Settings</h2>
+			<p><a href=/aaa/logout/>Log Out</a></p>
+
+			<hr>
+
+			<p><a onclick="OfdxSomeNotes.popAll()" class=btn>Back</a></p>
+		</div>
+
+		<!-- The main text editor -->
+		<div class="note_texted_card active" id=card_editor>
+			<!-- Note title -->
+			<input id="note_texted_doc_title" placeholder="Untitled" maxlength=128 autocomplete="off">
+
+			<!-- Main text area -->
+			<textarea id="note_texted_field" autocomplete="off"></textarea>
+		</div>
 	</div>
-
-	<div class="note_texted_card" id=card_settings>
-		<h2>Account Settings</h2>
-		<p><a href=/aaa/logout/>Log Out</a></p>
-
-		<hr>
-
-		<p><a onclick="OfdxSomeNotes.popAll()" class=btn>Back</a></p>
-	</div>
-
-	<div class="note_texted_card active" id=card_editor>
-		<!-- Note title -->
-		<input id="note_texted_doc_title" placeholder="Untitled" maxlength=128 autocomplete="off">
-
-		<!-- Main text area -->
-		<textarea id="note_texted_field" autocomplete="off"></textarea>
-	</div>
-	<!-- End Modal Cards -->
 </div>
 
 <script src="static/js/somenotes.js?v=<?ofdx version>"></script>

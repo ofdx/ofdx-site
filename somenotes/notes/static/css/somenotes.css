@@ -32,6 +32,8 @@ body {
 
 	color: #ccc;
 	background-color: #444;
+
+	user-select: none;
 }
 #note_texted_ctrlbar .pick,
 #note_texted_ctrlbar .nopick {
@@ -40,7 +42,6 @@ body {
 	padding: 0.4em;
 	height: 1em;
 
-	user-select: none;
 	font-family: sans-serif;
 	text-shadow: 0.1em 0.1em 0.1em rgba(0, 0, 0, 0.3);
 }
@@ -82,6 +83,7 @@ body {
 
 	padding: 0 0.5em;
 
+	user-select: none;
 	display: none;
 }
 .note_texted_ctrlbar_menu.active {

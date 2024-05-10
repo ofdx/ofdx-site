@@ -7,13 +7,12 @@ clean:
 	rm -f ${SOMENOTES}
 
 run: all stop
-	sleep 1
 	( ./${SOMENOTES} \
 		"templatepath /home/mike/src/ofdx/somenotes/notes/" \
 		"datapath /home/mike/test/db/somenotes/" ) &
 
 stop:
-	( killall -q ${SOMENOTES} ) &
+	killall -q ${SOMENOTES} || true
 
 ${SOMENOTES}: main.cc ../ofdx/* ../renényffenegger/rene.o
 	${GPP} -o ${SOMENOTES} main.cc ../renényffenegger/rene.o

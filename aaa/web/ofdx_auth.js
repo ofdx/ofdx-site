@@ -26,7 +26,7 @@ window.addEventListener("load", (e) => {
 					user: form_login.elements['ofdx_user'].value,
 					pass: form_login.elements['ofdx_pass'].value
 				},
-				completion: (http) => {
+				ondone: (http) => {
 					if(http.status == 204){
 						let redir = form_login.elements['ofdx_redir'];
 

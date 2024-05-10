@@ -14,11 +14,9 @@ var OfdxAsync = {
 			type:      XMLHttpRequest.responseType (e.g. 'json')
 
 			// Callback functions
-			onload:     for XMLHttpRequest.onload
-			success:    when readyState = 4 and http.status = 200
-			unhandled:  when readyState = 4 and status != 200
-			completion: when readyState = 4 (after success/unhandled)
-			onerror:    for XMLHttpRequest.onerror
+			onload:  for XMLHttpRequest.onload
+			ondone:  when readyState = 4
+			onerror: for XMLHttpRequest.onerror
 		}
 	*/
 	send: function(meta){
@@ -33,20 +31,8 @@ var OfdxAsync = {
 			if(meta.onload)
 				return meta.onload(http, xhrEvent);
 
-			if(http.readyState === 4){
-				switch(http.status){
-					case 200:
-						if(meta.success)
-							meta.success(http);
-						break;
-					default:
-						if(meta.unhandled)
-							meta.unhandled(http);
-				}
-
-				if(meta.completion)
-					meta.completion(http);
-			}
+			if((http.readyState === 4) && meta.ondone)
+				meta.ondone(http);
 		};
 		http.onerror = function(xhrEvent){
 			if(meta.onerror)
