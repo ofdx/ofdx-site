@@ -3,11 +3,15 @@
    mperron (2024)
 */
 
+#ifndef OFDX_FCGI_H
+#define OFDX_FCGI_H
+
 #include "fcgi/fcgi.hpp"
 
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <unordered_map>
 
 #define PORT_OFDX_AAA               9000
 #define PORT_OFDX_AAA_SESSION_MGR   9001
@@ -244,3 +248,5 @@ public:
 		return !result.empty();
 	}
 };
+
+#endif

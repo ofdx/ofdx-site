@@ -18,51 +18,88 @@ window.addEventListener('load', function(){
 		// Preload the field with the last value from localStorage, but disable
 		// it until we get the latest from the server.
 		note_texted_field.value = localStorage.getItem('note_texted_field_value');
-		note_texted_field.disabled = true;
 
 		// Get the latest version of the last note from the server
-		let notename = localStorage.getItem('note_texted_lastfile');
-		if(notename){
-			OfdxAsync.send({
-				target: 'f/' + notename,
-				type: 'json',
-				ondone: function(http){
-					// FIXME debug
-					console.log(http);
+		OfdxSomeNotes.loadNote = function(notename){
+			note_texted_field.disabled = true;
 
-					if(http.status === 200){
-						// Store this response for future reference.
-						OfdxSomeNotes.note = http.response;
+			if(notename){
+				localStorage.setItem('note_texted_lastfile', notename);
 
-						// Update fields on the page.
-						note_texted_field.value = atob(http.response.body);
-						note_texted_title.value = atob(http.response.title);
-					} else {
+				OfdxAsync.send({
+					target: 'f/' + notename,
+					type: 'json',
+					ondone: function(http){
 						// FIXME debug
-						alert('note not loaded...');
+						console.log(http);
 
-						// TODO handle if file does not exist on the server
+						if(http.status === 200){
+							// Store this response for future reference.
+							OfdxSomeNotes.note = http.response;
+
+							// Update fields on the page.
+							note_texted_field.value = atob(http.response.body);
+							note_texted_title.value = atob(http.response.title);
+						} else {
+							// FIXME debug
+							alert('note not loaded...');
+
+							// TODO handle if file does not exist on the server
+						}
+
+						note_texted_field.disabled = false;
+					},
+					onerror: function(http){
+						// FIXME debug
+						console.log('error!', http);
 					}
-
-					note_texted_field.disabled = false;
-				},
-				onerror: function(http){
-					// FIXME debug
-					console.log('error!', http);
-				}
-			});
-		} else {
-			note_texted_field.disabled = false;
+				});
+			} else {
+				note_texted_field.disabled = false;
+			}
 		}
+		OfdxSomeNotes.loadNote(localStorage.getItem('note_texted_lastfile'));
 
 		// Store changes.
-		note_texted_field.addEventListener('change', function(e){
-			// Store locally immediately.
-			localStorage.setItem('note_texted_field_value', note_texted_field.value);
+		var changeTimeout = undefined;
+		var changeFunction = function(e){
+			if(changeTimeout){
+				clearTimeout(changeTimeout);
+			}
 
-			// Store remotely after a timeout to minimize server impact.
-			// TODO
-		});
+			changeTimeout = setTimeout(function(){
+				changeTimeout = undefined;
+
+				// Store locally just in case.
+				localStorage.setItem('note_texted_field_value', note_texted_field.value);
+
+				// Store remotely if this is a named note.
+				let notename = localStorage.getItem('note_texted_lastfile');
+				if(notename){
+					let putbody = {
+						body: btoa(note_texted_field.value),
+						title: btoa(note_texted_title.value)
+					};
+
+					OfdxAsync.send({
+						target: 'f/' + notename,
+						method: 'PUT',
+						type: 'json',
+						post: JSON.stringify(putbody),
+						ondone: function(http){
+							// FIXME debug
+							console.log('PUT modified note:', http);
+
+							// TODO - handle failed to PUT update
+						}
+					});
+				}
+			}, 500);
+		}
+
+		// TODO - separate this out so we only send the changed field instead of both.
+		note_texted_field.addEventListener('input', changeFunction);
+		note_texted_title.addEventListener('input', changeFunction);
 	}
 
 	// Menubar
@@ -143,10 +180,16 @@ window.addEventListener('load', function(){
 							let n = OfdxSomeNotes.notes[i];
 							let el = document.createElement('div');
 
+							// TODO - style this, present modification time, short preview, handle the title being unset, etc.
 							el.classList.add('test');
 							el.innerHTML = `<span>${n.id}</span> | <span>${n.title}</span>`;
 
 							card.appendChild(el);
+
+							el.addEventListener('click', function(){
+								OfdxSomeNotes.loadNote(n.id);
+								OfdxSomeNotes.popAll();
+							});
 						}
 
 						// Link to close this dialog.

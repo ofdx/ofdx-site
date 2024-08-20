@@ -11,10 +11,11 @@
 
 #include "base64.h"
 #include "ofdx/ofdx_fcgi.h"
+#include "ofdx/ofdx_json.h"
 
 #include <filesystem>
 
-#define RESOURCE_VERSION 5
+#define RESOURCE_VERSION 6
 
 class OfdxSomeNotes : public OfdxFcgiService {
 	time_t m_timeNow;
@@ -58,6 +59,36 @@ public:
 					ss << ",\"body\":\"" << base64_encode(m_body) << "\"";
 
 				ss << "}";
+			}
+
+			bool applyJson(std::string const& obj, time_t time_now){
+				// Parse JSON string and apply to this note.
+				Json::Object_p kv = Json::parse(obj);
+
+				if(kv){
+					bool wasModified = false;
+					Json::String_p s;
+
+					if((s = kv->get<Json::String>("body"))){
+						m_body = base64_decode(s->get());
+						wasModified = true;
+					}
+					if((s = kv->get<Json::String>("title"))){
+						m_title = base64_decode(s->get());
+						wasModified = true;
+					}
+
+					// Update modification time and mark pending save.
+					// This will get written to disk soon.
+					if(wasModified){
+						m_timeModified = time_now;
+						m_pendingSave = true;
+					}
+
+					return true;
+				}
+
+				return false;
 			}
 		};
 
@@ -156,9 +187,24 @@ public:
 		}
 
 		void save(){
-			// TODO - write out entire database to disk. Or write one file?
-			// The persistence should probably be granual.
-			// Modification time management?
+			for(auto const& el : m_notes){
+				// Write files pending save.
+				if(el.second->m_pendingSave){
+					std::ofstream outfile(m_dbpath + el.second->m_id);
+
+					if(outfile){
+						outfile
+							<< "author " << el.second->m_author << "\n"
+							<< "title " << el.second->m_title << "\n"
+							<< "created " << el.second->m_timeCreated << "\n"
+							<< "modified " << el.second->m_timeModified << "\n"
+							<< "\n"
+							<< el.second->m_body;
+
+						el.second->m_pendingSave = false;
+					}
+				}
+			}
 		}
 
 		// FIXME debug
@@ -199,6 +245,11 @@ public:
 			}
 
 			return nullptr;
+		}
+
+		void deleteNote(std::shared_ptr<NoteFile> const& note){
+			if(note)
+				m_notes.erase(note->m_id);
 		}
 
 		NoteDatabase(std::string const& dbpath) :
@@ -260,6 +311,9 @@ private:
 					<< "\r\n"
 					<< "500\n" << std::endl;
 			}
+		} else {
+			// Method not implemented.
+			serve501(conn);
 		}
 	}
 	void apiFile(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn, std::string const& fname){
@@ -282,9 +336,48 @@ private:
 				serve404(conn);
 			}
 		} else if(REQUEST_METHOD == "PUT"){
-			// TODO - update this note
+			std::shared_ptr<NoteDatabase::NoteFile> note = m_noteDb->getNote(m_authUser, fname);
+
+			if(note){
+				// Note exists, this user can access it. Let's write the changes.
+
+				// Read note data from request body and apply to note
+				std::string bbuf;
+				if(conn->in() >> bbuf){ // TODO instead read bytes specified in CONTENT_LENGTH header
+					bool const valid = note->applyJson(bbuf, m_timeNow);
+
+					if(valid)
+						conn->out() << "Status: 204 OK\r\n\r\n";
+					else
+						conn->out()
+							<< "Status: 400 Bad Request\r\n"
+							<< "Content-Type: text/plain; charset=utf-8\r\n\r\n"
+							<< "Failed to parse JSON data." << std::endl;
+				}
+
+				// Write changes to disk.
+				m_noteDb->save();
+			} else {
+				serve404(conn);
+			}
 		} else if(REQUEST_METHOD == "DELETE"){
-			// TODO - delete the specified note
+			std::shared_ptr<NoteDatabase::NoteFile> note = m_noteDb->getNote(m_authUser, fname);
+
+			if(note){
+				conn->out()
+					<< "Status: 204 No Content\r\n"
+					<< "\r\n";
+
+				// Delete note
+				m_noteDb->deleteNote(note);
+
+				// TODO - persist
+			} else {
+				serve404(conn);
+			}
+		} else {
+			// Method not implemented.
+			serve501(conn);
 		}
 	}
 
@@ -373,6 +466,12 @@ private:
 			conn->out() << "<html><head><title>404</title></head><body>404</body></html>\r\n";
 	}
 
+	void serve501(std::unique_ptr<dmitigr::fcgi::Server_connection> const& conn){
+		conn->out()
+			<< "Status: 501 Not Implemented\r\n"
+			<< "\r\n";
+	}
+
 public:
 	struct Config : public OfdxBaseConfig {
 		std::string m_templatePath;
@@ -413,8 +512,6 @@ public:
 		parseCookies(conn);
 
 		if(SCRIPT_NAME == PATH_OFDX_SOMENOTES){
-			std::ifstream infile(m_cfg.m_templatePath + "index.html");
-
 			if(!serveTemplatedDocument(conn, (m_cfg.m_templatePath + "index.html"), true))
 				serve404(conn);
 		} else if(SCRIPT_NAME.find(URL_NOTES_FILE) == 0){
