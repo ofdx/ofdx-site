@@ -3,6 +3,12 @@
 	mperron (2024)
 
 	Basic JSON library (Javascript Object Notation)
+	https://www.json.org/json-en.html
+
+
+	TODO Support for floating point numbers
+
+	TODO Validate support for extraneous whitespace
 */
 
 #ifndef OFDX_JSON_H
@@ -12,12 +18,36 @@
 #include <string>
 #include <sstream>
 #include <memory>
+#include <vector>
 
-struct Json {
+class Json {
+	// Increment i to the next non-whitespace character
+	// (specifically space, carriage return, line feed, horizontal tab)
+	// Return false if whitespace extends to the end of the string.
+	static bool skipWhitespace(std::string const& blob, int &i){
+		for(
+			char c = blob[i];
+			((c == ' ') || (c == '\r') || (c == '\n') || (c == '\t'));
+			c = blob[++ i]
+		){
+			// Hit the end of the string without finding a value.
+			if(i >= blob.size())
+				return false;
+		}
+
+		return true;
+	}
+
+public:
 	// Abstract value type, should be implemented by actual data types.
 	struct Value {
 		enum Type {
-			JSON_VALUE_STRING, JSON_VALUE_OBJECT, JSON_VALUE_ARRAY, JSON_VALUE_BOOL, JSON_VALUE_INT
+			JSON_VALUE_STRING,
+			JSON_VALUE_OBJECT,
+			JSON_VALUE_ARRAY,
+			JSON_VALUE_BOOL,
+			JSON_VALUE_NULL,
+			JSON_VALUE_INT
 		} m_type;
 
 		Value(Type t) :
@@ -31,7 +61,6 @@ struct Json {
 		std::string str() const;
 	};
 	typedef std::shared_ptr<Json::Value> Value_p;
-	static void printValue(std::stringstream &ss, Json::Value_p value);
 
 	// Type of the root node map (key to value).
 	typedef std::unordered_map<std::string, Value_p> root_t;
@@ -89,6 +118,13 @@ struct Json {
 	};
 	typedef std::shared_ptr<Json::Bool> Bool_p;
 
+	struct Null : public Value {
+		Null() :
+			Value(JSON_VALUE_NULL)
+		{}
+	};
+	typedef std::shared_ptr<Json::Null> Null_p;
+
 	// Double-quote enclosed string values
 	struct String : public Value {
 		std::string const m_data;
@@ -142,11 +178,8 @@ struct Json {
 					ss << ",";
 				}
 
-				// Write key name.
-				ss << "\"" << kv.first << "\":";
-
-				// Write value.
-				printValue(ss, kv.second);
+				// Write out key:value
+				ss << "\"" << kv.first << "\":" << kv.second->str();
 			}
 
 			ss << "}";
@@ -155,18 +188,35 @@ struct Json {
 	};
 	typedef std::shared_ptr<Json::Object> Object_p;
 
+private:
+
 	// Get a value (no key) starting from the current position in the blob string.
 	static Json::Value_p parseValue(std::string const& blob, int &i){
 		Json::Value_p value_box;
+
+		if(!skipWhitespace(blob, i))
+			return nullptr;
 
 		switch(blob[i]){
 			// Parse double-quoted value.
 			case '"':
 				{
 					std::string const valuesource(blob.substr(i + 1));
+					size_t n = std::string::npos;
 
-					// FIXME - this will break if the quoted string contains a double-quote (").
-					size_t n = valuesource.find('"');
+					for(int ii = 0; ii < valuesource.size(); ++ ii){
+						// Found matching double-quote.
+						if(valuesource[ii] == '"'){
+							n = ii;
+							break;
+						}
+
+						// Skip the next character if we hit a backslash.
+						if(valuesource[ii] == '\\'){
+							++ ii;
+							continue;
+						}
+					}
 
 					if(n != std::string::npos){
 						i += n + 1;
@@ -182,7 +232,7 @@ struct Json {
 
 			// Nested object, recurse to populate.
 			case '{':
-				return parse(blob, i);
+				return parseObject(blob, ++ i);
 
 			// Booleans
 			case 't':
@@ -198,19 +248,26 @@ struct Json {
 				}
 				break;
 
+			case 'n':
+				if(blob.substr(i).find("null") == 0){
+					i += 3; // length of "null" - 1
+					return std::make_shared<Json::Null>();
+				}
+				break;
+
 			// Numbers
 			case '0': case '1': case '2':
 			case '3': case '4': case '5':
 			case '6': case '7': case '8':
-			case '9': case '-':
+			case '9': case '-': case '+':
 				// Parse numerical value
 				{
 					// FIXME - add support for floats
 					bool isNegative = false;
 
-					if(blob[i] == '-'){
-						isNegative = true;
-						++ i;
+					switch(blob[i]){
+						case '-': isNegative = true;
+						case '+': ++ i;
 					}
 
 					size_t const n = blob.substr(i).find_first_not_of("0123456789");
@@ -241,20 +298,31 @@ struct Json {
 		Json::Array_p root = std::make_shared<Json::Array>();
 
 		for(++ i; i < blob.size(); ++ i){
-			auto const c = blob[i];
-
-			// End of the array.
-			if(c == ']')
-				return root;
-
-			// Item separator, let's ignore it.
-			if(c == ',')
-				continue;
-
 			Json::Value_p value_box = parseValue(blob, i);
 
-			if(value_box)
+			if(value_box){
 				root->append(value_box);
+				++ i;
+			}
+
+			if(!skipWhitespace(blob, i))
+				return nullptr;
+
+			switch(blob[i]){
+				case ',':
+					if(!value_box)
+						return nullptr;
+
+					continue;
+
+				case ']':
+					// End of the array.
+					return root;
+
+				default:
+					// Anything else present here is an error.
+					return nullptr;
+			}
 		}
 
 		// We should have found a closing bracket. If we reach here this array
@@ -263,43 +331,59 @@ struct Json {
 	}
 
 	// Return a map built from the JSON string provided.
-	static Json::Object_p parse(std::string const& blob, int &i){
+	static Json::Object_p parseObject(std::string const& blob, int &i){
 		root_p root = std::make_shared<root_t>();
 
 		for(; i < blob.size(); ++ i){
-			auto const c = blob[i];
+			if(!skipWhitespace(blob, i))
+				return nullptr;
 
-			if(c == '}'){
-				// We have reached the end of this structure.
-				return std::make_shared<Json::Object>(root);
-			} else if(c == '"'){
-				// Open quote starts a key name.
-				std::string key;
+			switch(blob[i]){
+				case ',':
+					continue;
 
-				// Find the matching end quote, get the key name.
+				case '}':
+					// We have reached the end of this structure.
+					return std::make_shared<Json::Object>(root);
+
+				case '"':
 				{
-					std::string const keysource(blob.substr(i + 1));
-					size_t n = keysource.find('"');
+					// Open quote starts a key name.
+					std::string key;
 
-					if(n != std::string::npos){
-						key = keysource.substr(0, n);
-						i += n + 2;
+					// Find the matching end quote, get the key name.
+					{
+						std::string const keysource(blob.substr(i + 1));
+						size_t n = keysource.find('"');
 
-						// String ends sooner than expected!
-						if(i >= blob.size())
-							return nullptr;
+						if(n != std::string::npos){
+							key = keysource.substr(0, n);
+							i += n + 2;
+
+							// String ends sooner than expected!
+							if(i >= blob.size())
+								return nullptr;
+						}
 					}
+
+					if(!skipWhitespace(blob, i))
+						return nullptr;
+
+					// If colon is missing or the string ends, stop immediately and fail parse.
+					if((blob[i++] != ':') || (i >= blob.size()))
+						return nullptr;
+
+					Json::Value_p value_box = parseValue(blob, i);
+					if(value_box){
+						// Store the value
+						(*root)[key] = value_box;
+					}
+
+					break;
 				}
 
-				// If colon is missing or the string ends, stop immediately and fail parse.
-				if((blob[i++] != ':') || (i >= blob.size()))
+				default:
 					return nullptr;
-
-				Json::Value_p value_box = parseValue(blob, i);
-				if(value_box){
-					// Store the value
-					(*root)[key] = value_box;
-				}
 			}
 		}
 
@@ -307,35 +391,54 @@ struct Json {
 		// point is an error.
 		return nullptr;
 	}
-	static Json::Object_p parse(std::string const& blob){
+
+public:
+	// Parse any JSON value.
+	static Json::Value_p parseValue(std::string const& blob){
 		// Start from the beginning of the string.
 		int resume_index = 0;
 
-		return parse(blob, resume_index);
+		return parseValue(blob, resume_index);
+	}
+
+	// Expect that the JSON string is a valid Object, return nullptr otherwise.
+	static Json::Object_p parseObject(std::string const& blob){
+		Json::Value_p v = parseValue(blob);
+
+		if(!v || (v->type() != Json::Value::JSON_VALUE_OBJECT))
+			return nullptr;
+
+		return std::static_pointer_cast<Json::Object>(v);
 	}
 };
 
-void Json::printValue(std::stringstream &ss, Json::Value_p value){
-	switch(value->type()){
+std::string Json::Value::str() const {
+	std::stringstream ss;
+
+	switch(type()){
 		case Json::Value::JSON_VALUE_STRING:
-			ss << "\"" << std::static_pointer_cast<Json::String>(value)->get() << "\"";
+			ss << "\"" << ((Json::String*) this)->get() << "\"";
 			break;
 
 		case Json::Value::JSON_VALUE_OBJECT:
-			ss << std::static_pointer_cast<Json::Object>(value)->str();
+			ss << ((Json::Object*) this)->str();
 			break;
 
 		case Json::Value::JSON_VALUE_BOOL:
-			ss << (std::static_pointer_cast<Json::Bool>(value)->get() ? "true" : "false");
+			ss << (((Json::Bool*) this)->get() ? "true" : "false");
+			break;
+
+		case Json::Value::JSON_VALUE_NULL:
+			ss << "null";
 			break;
 
 		case Json::Value::JSON_VALUE_INT:
-			ss << std::static_pointer_cast<Json::Int>(value)->get();
+			ss << ((Json::Int*) this)->get();
 			break;
 
 		case Json::Value::JSON_VALUE_ARRAY:
 			{
-				Json::Array_p arr = std::static_pointer_cast<Json::Array>(value);
+				Json::Array* arr = ((Json::Array*) this);
 				if(arr){
 					bool first = true;
 
@@ -348,7 +451,7 @@ void Json::printValue(std::stringstream &ss, Json::Value_p value){
 							ss << ",";
 						}
 
-						printValue(ss, arr->get(i));
+						ss << arr->get(i)->str();
 					}
 
 					ss << "]";
@@ -359,6 +462,8 @@ void Json::printValue(std::stringstream &ss, Json::Value_p value){
 		default:
 			ss << "error";
 	}
+
+	return ss.str();
 }
 
 #endif

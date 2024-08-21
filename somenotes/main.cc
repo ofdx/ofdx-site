@@ -63,7 +63,7 @@ public:
 
 			bool applyJson(std::string const& obj, time_t time_now){
 				// Parse JSON string and apply to this note.
-				Json::Object_p kv = Json::parse(obj);
+				Json::Object_p kv = Json::parseObject(obj);
 
 				if(kv){
 					bool wasModified = false;
@@ -85,8 +85,14 @@ public:
 						m_pendingSave = true;
 					}
 
+					// FIXME debug
+					std::cout << kv->str() << "\n" << std::endl;
+
 					return true;
 				}
+
+				// FIXME debug
+				std::cout << "failed to parse: " << obj << std::endl;
 
 				return false;
 			}
@@ -342,9 +348,14 @@ private:
 				// Note exists, this user can access it. Let's write the changes.
 
 				// Read note data from request body and apply to note
-				std::string bbuf;
-				if(conn->in() >> bbuf){ // TODO instead read bytes specified in CONTENT_LENGTH header
-					bool const valid = note->applyJson(bbuf, m_timeNow);
+				std::string const content_length = std::string(conn->parameter("CONTENT_LENGTH"));
+				if(content_length.size()){
+					int64_t len = std::stol(content_length);
+					std::string bbuf(len, 0);
+					bool valid = false;
+
+					if(conn->in().read(&bbuf[0], len))
+						valid = note->applyJson(bbuf, m_timeNow);
 
 					if(valid)
 						conn->out() << "Status: 204 OK\r\n\r\n";
