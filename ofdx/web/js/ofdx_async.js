@@ -50,4 +50,16 @@ var OfdxAsync = {
 
 		http.send(meta.post);
 	},
+
+	// Based on the solution provided by Mozilla:
+	// https://developer.mozilla.org/en-US/docs/Glossary/Base64
+	atob: function(b64){
+		const bin = atob(b64);
+		return (new TextDecoder().decode(Uint8Array.from(bin, (m) => m.codePointAt(0))));
+	},
+	btoa: function(str){
+		const bytes = new TextEncoder().encode(str);
+		const bin = Array.from(bytes, (b) => String.fromCodePoint(b)).join("");
+		return btoa(bin);
+	}
 };
