@@ -12,6 +12,19 @@ var OfdxSomeNotes = {
 window.addEventListener('load', function(){
 	// Main textarea
 	{
+		// Based on the solution provided by Mozilla:
+		// https://developer.mozilla.org/en-US/docs/Glossary/Base64
+		OfdxSomeNotes.atob = function(b64){
+			const bin = atob(b64);
+			return (new TextDecoder().decode(Uint8Array.from(bin, (m) => m.codePointAt(0))));
+		};
+		OfdxSomeNotes.btoa = function(str){
+			const bytes = new TextEncoder().encode(str);
+			const bin = Array.from(bytes, (b) => String.fromCodePoint(b)).join("");
+			return btoa(bin);
+		};
+
+
 		var note_texted_field = document.getElementById('note_texted_field');
 		var note_texted_title = document.getElementById('note_texted_doc_title');
 
@@ -38,8 +51,8 @@ window.addEventListener('load', function(){
 							OfdxSomeNotes.note = http.response;
 
 							// Update fields on the page.
-							note_texted_field.value = atob(http.response.body);
-							note_texted_title.value = atob(http.response.title);
+							note_texted_field.value = OfdxSomeNotes.atob(http.response.body);
+							note_texted_title.value = OfdxSomeNotes.atob(http.response.title);
 						} else {
 							// FIXME debug
 							alert('note not loaded...');
@@ -77,8 +90,8 @@ window.addEventListener('load', function(){
 				let notename = localStorage.getItem('note_texted_lastfile');
 				if(notename){
 					let putbody = {
-						body: btoa(note_texted_field.value),
-						title: btoa(note_texted_title.value)
+						body: OfdxSomeNotes.btoa(note_texted_field.value),
+						title: OfdxSomeNotes.btoa(note_texted_title.value)
 					};
 
 					OfdxAsync.send({
@@ -167,7 +180,7 @@ window.addEventListener('load', function(){
 						OfdxSomeNotes.notes = http.response.notes
 							// Decode base64 title.
 							.map(el => {
-								return { ... el, title: atob(el.title) };
+								return { ... el, title: OfdxSomeNotes.atob(el.title) };
 							})
 							// Sort from most to least recently modified.
 							.sort((a, b) => a.modified < b.modified);

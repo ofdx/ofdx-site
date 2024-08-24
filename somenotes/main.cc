@@ -15,7 +15,7 @@
 
 #include <filesystem>
 
-#define RESOURCE_VERSION 6
+#define RESOURCE_VERSION 7
 
 class OfdxSomeNotes : public OfdxFcgiService {
 	time_t m_timeNow;
@@ -86,7 +86,7 @@ public:
 					}
 
 					// FIXME debug
-					std::cout << kv->str() << "\n" << std::endl;
+					//std::cout << kv->str() << "\n" << std::endl;
 
 					return true;
 				}

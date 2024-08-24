@@ -7,8 +7,6 @@
 
 
 	TODO Support for floating point numbers
-
-	TODO Validate support for extraneous whitespace
 */
 
 #ifndef OFDX_JSON_H
